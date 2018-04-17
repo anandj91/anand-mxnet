@@ -1,0 +1,14 @@
+build
+deps
+*.pb.*
+.*
+*core*
+docs/html
+docs/xml
+docs/latex
+docs/_build
+tests/test_*
+*.pyc
+*.d
+
+recommonmark/
