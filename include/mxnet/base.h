@@ -146,6 +146,7 @@ struct Context {
     kGPU = gpu::kDevMask,
     kCPUPinned = 3,
     kCPUShared = 5,
+    kOverall
   };
   /*! \brief the device type we run the op on */
   DeviceType dev_type;
