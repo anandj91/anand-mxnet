@@ -326,12 +326,8 @@ class ThreadedEngine : public Engine {
 #if MXNET_USE_PROFILER
     if (opr_block->profiling && threaded_opr->opr_name) {
       const Context& ctx = opr_block->ctx;
-      opr_block->opr_stat = Profiler::Get()->AddOprStat(ctx.dev_type, ctx.dev_id);
-      uint64_t id = std::hash<std::thread::id>()(std::this_thread::get_id());
-      opr_block->opr_stat->thread_id = id;
-      strncpy(opr_block->opr_stat->opr_name,
-        threaded_opr->opr_name,
-        sizeof(opr_block->opr_stat->opr_name) - 1);
+      opr_block->opr_stat = Profiler::Get()->AddOprStat(ctx.dev_type,
+        ctx.dev_id, threaded_opr->opr_name);
       // record operator start timestamp
       SetOprStart(opr_block->opr_stat);
     }

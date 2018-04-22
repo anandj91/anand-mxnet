@@ -53,7 +53,7 @@ Profiler::Profiler()
   this->gpu_num_ = 0;
 #endif
 
-  this->profile_stat = new DevStat[cpu_num_ + gpu_num_ + 1];
+  this->profile_stat = new DevStat[cpu_num_ + gpu_num_ + 1 + 1];
   for (unsigned int i = 0; i < cpu_num_; ++i) {
     profile_stat[i].dev_name_ = "cpu/" + std::to_string(i);
   }
@@ -61,6 +61,7 @@ Profiler::Profiler()
     profile_stat[cpu_num_ + i].dev_name_ = "gpu/" + std::to_string(i);
   }
   profile_stat[cpu_num_ + gpu_num_].dev_name_ = "cpu pinned/";
+  profile_stat[cpu_num_ + gpu_num_ + 1].dev_name_ = "overall/";
 
   mode_ = (ProfilerMode)dmlc::GetEnv("MXNET_PROFILER_MODE", static_cast<int>(kOnlySymbolic));
   if (dmlc::GetEnv("MXNET_PROFILER_AUTOSTART", 0)) {
@@ -92,6 +93,15 @@ void Profiler::SetConfig(ProfilerMode mode, std::string output_filename) {
   this->filename_ = output_filename;
 }
 
+OprExecStat *Profiler::AddOprStat(int dev_type, uint32_t dev_id,
+                                    std::string name) {
+    OprExecStat* opr_stat = AddOprStat(dev_type, dev_id);
+    uint64_t id = std::hash<std::thread::id>()(std::this_thread::get_id());
+    opr_stat->thread_id = id;
+    strncpy(opr_stat->opr_name, name.c_str(), sizeof(opr_stat->opr_name) - 1);
+	return opr_stat;
+}
+
 OprExecStat *Profiler::AddOprStat(int dev_type, uint32_t dev_id) {
   std::unique_ptr<OprExecStat> opr_stat(new OprExecStat);
   opr_stat->dev_type = dev_type;
@@ -108,6 +118,9 @@ OprExecStat *Profiler::AddOprStat(int dev_type, uint32_t dev_id) {
       break;
     case Context::kCPUPinned:
       idx = cpu_num_ + gpu_num_;
+      break;
+    case Context::kOverall:
+      idx = cpu_num_ + gpu_num_ + 1;
       break;
     default:
       LOG(FATAL) << "Unknown dev_type: " << dev_type;
@@ -154,7 +167,7 @@ void Profiler::DumpProfile() {
   file << "{" << std::endl;
   file << "    \"traceEvents\": [" << std::endl;
 
-  uint32_t dev_num = cpu_num_ + gpu_num_ + 1;
+  uint32_t dev_num = cpu_num_ + gpu_num_ + 1 + 1;
 
   for (uint32_t i = 0; i < dev_num; ++i) {
     const DevStat &d = profile_stat[i];

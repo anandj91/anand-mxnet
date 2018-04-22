@@ -126,6 +126,8 @@ class Profiler {
   /*! \brief add one operation execution record in
    *   corresponding device statistics */
   OprExecStat* AddOprStat(int dev_type, uint32_t dev_id);
+  OprExecStat* AddOprStat(int dev_type, uint32_t dev_id, std::string name);
+
   /*! \return Profiler singleton */
   static Profiler* Get();
 
