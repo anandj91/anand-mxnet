@@ -45,7 +45,7 @@ export NVCC = nvcc
 DEV = 0
 
 # whether compile with debug
-DEBUG = 1
+DEBUG = 0
 
 # whether compile with profiler
 USE_PROFILER = 1
