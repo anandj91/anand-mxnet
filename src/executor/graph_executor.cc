@@ -79,7 +79,21 @@ inline void EmplaceBackZeros(const NDArrayStorageType stype, const TShape &shape
   }
 }
 void GraphExecutor::Forward(bool is_train) {
+#if MXNET_USE_PROFILER
+  engine::Profiler *profiler = engine::Profiler::Get();
+  engine::OprExecStat *opr_stat;
+  if (profiler->GetState() == engine::Profiler::ProfilerState::kRunning) {
+      opr_stat = profiler->AddOprStat(saved_ctx.dev_mask(),
+                                    saved_ctx.real_dev_id(), "__Forward__");
+      engine::SetOprStart(opr_stat);
+  }
+#endif
   RunOps(is_train, 0, num_forward_nodes_);
+#if MXNET_USE_PROFILER
+  if (profiler->GetState() == engine::Profiler::ProfilerState::kRunning) {
+      engine::SetOprEnd(opr_stat);
+  }
+#endif
 }
 
 void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
@@ -92,6 +106,15 @@ void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
 }
 
 void GraphExecutor::Backward(const std::vector<NDArray>& head_grads, bool is_train) {
+#if MXNET_USE_PROFILER
+  engine::Profiler *profiler = engine::Profiler::Get();
+  engine::OprExecStat *opr_stat;
+  if (profiler->GetState() == engine::Profiler::ProfilerState::kRunning) {
+      opr_stat = profiler->AddOprStat(saved_ctx.dev_mask(),
+                                    saved_ctx.real_dev_id(), "__Backward__");
+      engine::SetOprStart(opr_stat);
+  }
+#endif
   const auto& idx = graph_.indexed_graph();
   if (num_forward_inputs_ != idx.input_nodes().size()) {
     for (size_t i = 0; i < head_grad_array_.size(); ++i) {
@@ -107,6 +130,11 @@ void GraphExecutor::Backward(const std::vector<NDArray>& head_grads, bool is_tra
     }
   }
   RunOps(is_train, num_forward_nodes_, idx.num_nodes());
+#if MXNET_USE_PROFILER
+  if (profiler->GetState() == engine::Profiler::ProfilerState::kRunning) {
+      engine::SetOprEnd(opr_stat);
+  }
+#endif
 }
 
 void GraphExecutor::Print(std::ostream &os) const {  // NOLINT(*)
@@ -965,6 +993,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                          std::unordered_map<std::string, NDArray>* shared_buffer,
                          Executor* shared_exec,
                          const nnvm::NodeEntryMap<NDArray>& feed_dict) {
+  saved_ctx = default_ctx;
   nnvm::Graph g = InitGraph(symbol, default_ctx, ctx_map, in_arg_ctxes, arg_grad_ctxes,
                             aux_state_ctxes, grad_req_types);
   // The following code of shape and dtype inferences and argument

@@ -106,6 +106,8 @@ class GraphExecutor : public Executor {
             const nnvm::NodeEntryMap<NDArray>& feed_dict
               = nnvm::NodeEntryMap<NDArray>());
 
+  Context saved_ctx;
+
  protected:
   friend class mxnet::Imperative;
   // Information about operational node
