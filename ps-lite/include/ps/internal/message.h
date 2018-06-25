@@ -186,6 +186,8 @@ struct Meta {
   std::vector<DataType> data_type;
   /** \brief system control message */
   Control control;
+  /* priority */
+  int priority;
 };
 /**
  * \brief messages that communicated amaong nodes.

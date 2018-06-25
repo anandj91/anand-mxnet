@@ -39,6 +39,8 @@ struct KVPairs {
   SArray<Val> vals;
   /** \brief the according value lengths (could be empty) */
   SArray<int> lens;
+  /* priority */
+  int priority;
 };
 
 /**
@@ -176,13 +178,15 @@ class KVWorker : public SimpleApp {
             const SArray<Val>& vals,
             const SArray<int>& lens = {},
             int cmd = 0,
-            const Callback& cb = nullptr) {
+            const Callback& cb = nullptr,
+            int priority = 0) {
     int ts = obj_->NewRequest(kServerGroup);
     AddCallback(ts, cb);
     KVPairs<Val> kvs;
     kvs.keys = keys;
     kvs.vals = vals;
     kvs.lens = lens;
+    kvs.priority = priority;
     Send(ts, true, cmd, kvs);
     return ts;
   }
@@ -199,8 +203,9 @@ class KVWorker : public SimpleApp {
             SArray<Val>* vals,
             SArray<int>* lens = nullptr,
             int cmd = 0,
-            const Callback& cb = nullptr) {
-    return Pull_(keys, vals, lens, cmd, cb);
+            const Callback& cb = nullptr,
+            int priority = 0) {
+    return Pull_(keys, vals, lens, cmd, cb, priority);
   }
   using SlicedKVs = std::vector<std::pair<bool, KVPairs<Val>>>;
   /**
@@ -227,7 +232,7 @@ class KVWorker : public SimpleApp {
    */
   template <typename C, typename D>
   int Pull_(const SArray<Key>& keys, C* vals, D* lens,
-            int cmd, const Callback& cb);
+            int cmd, const Callback& cb, int priority);
   /**
    * \brief add a callback for a request. threadsafe.
    * @param cb callback
@@ -485,6 +490,7 @@ void KVWorker<Val>::Send(int timestamp, bool push, int cmd, const KVPairs<Val>& 
     msg.meta.head        = cmd;
     msg.meta.timestamp   = timestamp;
     msg.meta.recver      = Postoffice::Get()->ServerRankToID(i);
+    msg.meta.priority    = kvs.priority;
     const auto& kvs = s.second;
     if (kvs.keys.size()) {
       msg.AddData(kvs.keys);
@@ -543,7 +549,7 @@ void KVWorker<Val>::RunCallback(int timestamp) {
 template <typename Val>
 template <typename C, typename D>
 int KVWorker<Val>::Pull_(
-    const SArray<Key>& keys, C* vals, D* lens, int cmd, const Callback& cb) {
+    const SArray<Key>& keys, C* vals, D* lens, int cmd, const Callback& cb, int priority) {
   int ts = obj_->NewRequest(kServerGroup);
   AddCallback(ts, [this, ts, keys, vals, lens, cb]() mutable {
       mu_.lock();
@@ -599,6 +605,7 @@ int KVWorker<Val>::Pull_(
     });
 
   KVPairs<Val> kvs; kvs.keys = keys;
+  kvs.priority = priority;
   Send(ts, false, cmd, kvs);
   return ts;
 }
