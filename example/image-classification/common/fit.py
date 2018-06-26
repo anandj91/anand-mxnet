@@ -19,6 +19,9 @@ import mxnet as mx
 import logging
 import os
 import time
+from mxnet import profiler
+from os.path import expanduser
+import socket
 
 def _get_lr_scheduler(args, kv):
     if 'lr_factor' not in args or args.lr_factor >= 1:
@@ -195,8 +198,22 @@ def fit(args, network, data_loader, **kwargs):
     if args.top_k > 0:
         eval_metrics.append(mx.metric.create('top_k_accuracy', top_k=args.top_k))
 
+    logfile = expanduser("~")+"/profiler-"+str(socket.gethostname())+"-"+str(kv.rank)+".json"
+    mx.profiler.profiler_set_config(mode='all', filename=logfile)
+    def callback():
+        def switch_profiler(param):
+            if param.epoch == 0 and param.nbatch == 100:
+                profiler.profiler_set_state('run')
+            if param.epoch == 0 and param.nbatch == 150:
+                profiler.profiler_set_state('stop')
+                profiler.dump_profile()
+
+        return switch_profiler;
+
     # callbacks that run after each batch
-    batch_end_callbacks = [mx.callback.Speedometer(args.batch_size, args.disp_batches)]
+    batch_end_callbacks = [mx.callback.Speedometer(args.batch_size, args.disp_batches),
+            callback()]
+
     if 'batch_end_callback' in kwargs:
         cbs = kwargs['batch_end_callback']
         batch_end_callbacks += cbs if isinstance(cbs, list) else [cbs]
