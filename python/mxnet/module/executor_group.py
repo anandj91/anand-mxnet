@@ -394,6 +394,19 @@ class DataParallelExecutorGroup(object):
             If this is True, no error will be thrown when arg_params or aux_params
             contain extra parameters that is not needed by the executor.
         """
+        arg_size = 0
+        aux_size = 0
+        for arg_param, arg_arr in arg_params.items():
+            arg_size += arg_arr.size
+            self.logger.info("ARG %s = %d (%s)" % (arg_param, arg_arr.size, arg_arr.dtype))
+
+        for aux_param, aux_arr in aux_params.items():
+            aux_size += aux_arr.size
+            self.logger.info("AUX %s = %d (%s)" % (aux_param, aux_arr.size, aux_arr.dtype))
+
+        self.logger.info("Total arg_params size = %d" % arg_size)
+        self.logger.info("Total aux_params size = %d" % aux_size)
+
         for exec_ in self.execs:
             exec_.copy_params_from(arg_params, aux_params, allow_extra_params=allow_extra)
 
