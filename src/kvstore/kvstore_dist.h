@@ -169,6 +169,16 @@ class KVStoreDist : public KVStoreLocal {
   std::unordered_map<int, PSKV> ps_kv_;
   std::unordered_map<int, ComprPSKV> compr_ps_kv_;
 
+  struct time_pair {
+    int time = 0;
+    int count = 0;
+  };
+
+  std::unordered_map<int, time_pair> key_time;
+  std::pair<int, long> last_time;
+  std::mutex mu_prio_;
+  int prio_count = 0;
+
   /**
    * \brief serialize access to ps_kv_ or push_ps_kv_/pull_ps_kv_ while encoding keys
    */
@@ -429,6 +439,33 @@ class KVStoreDist : public KVStoreLocal {
 #endif
           // do push. false means no delete
           ps::SArray<real_t> vals(data, size, false);
+
+          if (prio_count == 100) {
+              if (key_time.find(key) != key_time.end()) {
+                  auto &time = key_time[key];
+                  std::cout << "Key: " << key << " Avg. time: " << time.time/time.count << " Size: " << size << std::endl;
+                  time.time = 0;
+                  time.count = 0;
+              }
+              if (key == 0) {
+                prio_count=0;
+              }
+          } else if (size > 2048 || key == 0) {
+              std::lock_guard<std::mutex> lock(mu_prio_);
+              auto cur = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+              if (key == 0) {
+                  last_time.first = key;
+                  last_time.second = cur;
+                  prio_count++;
+              } else if (prio_count > 1) {
+                  auto &last = key_time[last_time.first];
+                  last.time += (cur - last_time.second);
+                  last.count++;
+                  last_time.first = key;
+                  last_time.second = cur;
+              }
+          }
+
           CHECK_NOTNULL(ps_worker_)->ZPush(
               pskv.keys, vals, pskv.lens,
               static_cast<int>(DataHandleType::kDefaultPushPull), [cb, opr_stat]() {
