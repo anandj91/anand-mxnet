@@ -245,11 +245,26 @@ class KVStoreDist : public KVStoreLocal {
         int cmd = (gradient_compression_->get_type() != CompressionType::kNone) ?
                   static_cast<int>(DataHandleType::kCompressedPushPull) :
                   static_cast<int>(DataHandleType::kDefaultPushPull);
-        CHECK_NOTNULL(ps_worker_)->ZPull(
-          pskv.keys, vals, &pskv.lens, cmd, [vals, cb, opr_stat]() {
-              engine::SetOprEnd(opr_stat);
-              delete vals; cb();
-          });
+        int len=0;
+        auto *counter = new std::atomic<int>(pskv.keys.size());
+        for (int i=0; i<pskv.keys.size(); i++) {
+            auto vs = new ps::SArray<real_t>(std::move(vals->segment(len, len+pskv.lens[i])));
+            auto ls = new ps::SArray<int>(std::move(pskv.lens.segment(i, i+1)));
+            CHECK_NOTNULL(ps_worker_)->ZPull(
+                    pskv.keys.segment(i, i+1), vs, ls, cmd,
+                    [vs, ls, vals, cb, counter, opr_stat]() {
+                        engine::SetOprEnd(opr_stat);
+                        delete vs;
+                        delete ls;
+                        (*counter)--;
+                        if (counter->load() == 0) {
+                            delete vals;
+                            delete counter;
+                            cb();
+                        }
+                    });
+            len+=pskv.lens[i];
+        }
       };
 
       CHECK_NOTNULL(Engine::Get())->PushAsync(
@@ -429,12 +444,24 @@ class KVStoreDist : public KVStoreLocal {
 #endif
           // do push. false means no delete
           ps::SArray<real_t> vals(data, size, false);
-          CHECK_NOTNULL(ps_worker_)->ZPush(
-              pskv.keys, vals, pskv.lens,
-              static_cast<int>(DataHandleType::kDefaultPushPull), [cb, opr_stat]() {
-                  engine::SetOprEnd(opr_stat);
-                  cb();
-              });
+          auto *counter = new std::atomic<int>(pskv.keys.size());
+          int len=0;
+          for (int i=0; i<pskv.keys.size(); i++) {
+              CHECK_NOTNULL(ps_worker_)->ZPush(
+                      pskv.keys.segment(i, i+1),
+                      vals.segment(len, len+pskv.lens[i]),
+                      pskv.lens.segment(i, i+1),
+                      static_cast<int>(DataHandleType::kDefaultPushPull),
+                      [cb, counter, opr_stat]() {
+                            engine::SetOprEnd(opr_stat);
+                            (*counter)--;
+                            if (counter->load() == 0) {
+                                delete counter;
+                                cb();
+                            }
+                      });
+              len+=pskv.lens[i];
+          }
         };
     Engine::Get()->PushAsync(
         push_to_servers,
