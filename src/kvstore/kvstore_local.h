@@ -35,8 +35,6 @@
 #include <algorithm>
 #include "./comm.h"
 #include "./kvstore_utils.h"
-#include "../engine/profiler.h"
-#include <mxnet/base.h>
 
 namespace mxnet {
 namespace kvstore {
@@ -161,16 +159,6 @@ class KVStoreLocal : public KVStore {
   virtual void PushImpl(const std::vector<int>& keys,
                         const std::vector<NDArray>& values,
                         int priority) {
-#if MXNET_USE_PROFILER
-    engine::Profiler *profiler = engine::Profiler::Get();
-    engine::OprExecStat *opr_stat;
-    Context saved_ctx = values.front().ctx();
-    if (profiler->GetState() == engine::Profiler::ProfilerState::kRunning) {
-        opr_stat = profiler->AddOprStat(saved_ctx.dev_mask(),
-                                    saved_ctx.real_dev_id(), "__Push__");
-        engine::SetOprStart(opr_stat);
-    }
-#endif
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals);
@@ -205,27 +193,11 @@ class KVStoreLocal : public KVStore {
         }
       }
     }
-#if MXNET_USE_PROFILER
-    if (profiler->GetState() == engine::Profiler::ProfilerState::kRunning) {
-        engine::SetOprEnd(opr_stat);
-    }
-#endif
   }
 
   virtual void PullImpl(const std::vector<int>& keys,
                         const std::vector<NDArray*>& values,
                         int priority) {
-#if MXNET_USE_PROFILER
-    engine::Profiler *profiler = engine::Profiler::Get();
-    engine::OprExecStat *opr_stat;
-    Context saved_ctx = values.front()->ctx();
-    if (profiler->GetState() == engine::Profiler::ProfilerState::kRunning) {
-        opr_stat = profiler->AddOprStat(saved_ctx.dev_mask(),
-                                    saved_ctx.real_dev_id(), "__Pull__");
-        engine::SetOprStart(opr_stat);
-    }
-#endif
-
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray*> > grouped_vals;
     GroupKVPairsPull(keys, values, &uniq_keys, &grouped_vals);
@@ -236,27 +208,11 @@ class KVStoreLocal : public KVStore {
       CHECK(!local.is_none()) << "key " << key << " has not been inited";
       comm_->Broadcast(key, local, grouped_vals[i], priority);
     }
-#if MXNET_USE_PROFILER
-    if (profiler->GetState() == engine::Profiler::ProfilerState::kRunning) {
-        engine::SetOprEnd(opr_stat);
-    }
-#endif
   }
 
   virtual void PullRowSparseImpl(const std::vector<int>& keys,
                                  const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
                                  int priority = 0) {
-#if MXNET_USE_PROFILER
-    engine::Profiler *profiler = engine::Profiler::Get();
-    engine::OprExecStat *opr_stat;
-    Context saved_ctx = std::get<0>(val_rowids.front())->ctx();
-    if (profiler->GetState() == engine::Profiler::ProfilerState::kRunning) {
-        opr_stat = profiler->AddOprStat(saved_ctx.dev_mask(),
-                                    saved_ctx.real_dev_id(), "__PullRowSparse__");
-        engine::SetOprStart(opr_stat);
-    }
-#endif
-
     std::vector<int> uniq_keys;
     std::vector<std::vector<std::pair<NDArray*, NDArray>>> grouped_val_rowids;
     GroupKVPairsPullRsp(keys, val_rowids, &uniq_keys, &grouped_val_rowids);
@@ -277,11 +233,6 @@ class KVStoreLocal : public KVStore {
       }
       comm_->BroadcastRowSparse(key, local, grouped_val_rowids[i], false, priority);
     }
-#if MXNET_USE_PROFILER
-    if (profiler->GetState() == engine::Profiler::ProfilerState::kRunning) {
-        engine::SetOprEnd(opr_stat);
-    }
-#endif
   }
 
  protected:

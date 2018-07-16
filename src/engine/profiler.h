@@ -39,7 +39,7 @@ namespace engine {
  */
 struct OprExecStat {
   /*! \brief operation name */
-  char opr_name[32];
+  char opr_name[100];
   /*!
    * \brief operation execution start relative timestamp
    *        time unit is microsecond (10^-6 s)
@@ -59,6 +59,8 @@ struct OprExecStat {
   uint32_t dev_type;
   /*! \brief device id */
   uint32_t dev_id;
+
+  int32_t key = -1;
 };
 
 /*!
@@ -170,6 +172,8 @@ inline uint64_t NowInUsec();
 void SetOprStart(OprExecStat* opr_stat);
 /*! \brief set operation execution end timestamp */
 void SetOprEnd(OprExecStat* opr_stat);
+/*! \brief set operation execution start timestamp */
+OprExecStat* SetOprStart(std::string &name);
 
 }  // namespace engine
 }  // namespace mxnet

@@ -30,6 +30,7 @@
 #include <utility>
 #include "./kvstore_local.h"
 #include "mxnet/engine.h"
+#include "../engine/profiler.h"
 #include "ps/ps.h"
 #include "./kvstore_dist_server.h"
 #if MKL_EXPERIMENTAL == 1
@@ -225,6 +226,12 @@ class KVStoreDist : public KVStoreLocal {
         // convert to ps keys
         size_t size = recv_buf.shape().Size();
 
+        std::string name = "__Pull__"  + reverse_str_key_dict_[key] + "__" + std::to_string(size);
+        auto opr_stat = engine::SetOprStart(name);
+        if (opr_stat) {
+            opr_stat->key = key;
+        }
+
         PSKV& pskv = (gradient_compression_->get_type() == CompressionType::kNone) ?
                       EncodeDefaultKey(key, size, false) :
                       EncodeCompressedKey(key, size, false);
@@ -239,7 +246,10 @@ class KVStoreDist : public KVStoreLocal {
                   static_cast<int>(DataHandleType::kCompressedPushPull) :
                   static_cast<int>(DataHandleType::kDefaultPushPull);
         CHECK_NOTNULL(ps_worker_)->ZPull(
-          pskv.keys, vals, &pskv.lens, cmd, [vals, cb](){ delete vals; cb(); });
+          pskv.keys, vals, &pskv.lens, cmd, [vals, cb, opr_stat]() {
+              engine::SetOprEnd(opr_stat);
+              delete vals; cb();
+          });
       };
 
       CHECK_NOTNULL(Engine::Get())->PushAsync(
@@ -249,7 +259,7 @@ class KVStoreDist : public KVStoreLocal {
           {recv_buf.var()},
           FnProperty::kNormal,
           priority,
-          PROFILER_MESSAGE("KVStoreDistDefaultStoragePull"));
+          nullptr);
 
       comm_->Broadcast(key, recv_buf, grouped_vals[i], priority);
     }
@@ -406,6 +416,13 @@ class KVStoreDist : public KVStoreLocal {
         [this, key, pskv, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
           // convert to ps keys
           size_t size = send_buf.shape().Size();
+
+          std::string name = "__Push__"  + reverse_str_key_dict_[key] + "__" + std::to_string(size);
+          auto opr_stat = engine::SetOprStart(name);
+          if(opr_stat) {
+              opr_stat->key = key;
+          }
+
           real_t* data = send_buf.data().dptr<real_t>();
 #if MKL_EXPERIMENTAL == 1
           mkl_set_tblob_eager_mode(send_buf.data());
@@ -414,7 +431,10 @@ class KVStoreDist : public KVStoreLocal {
           ps::SArray<real_t> vals(data, size, false);
           CHECK_NOTNULL(ps_worker_)->ZPush(
               pskv.keys, vals, pskv.lens,
-              static_cast<int>(DataHandleType::kDefaultPushPull), [cb]() { cb(); });
+              static_cast<int>(DataHandleType::kDefaultPushPull), [cb, opr_stat]() {
+                  engine::SetOprEnd(opr_stat);
+                  cb();
+              });
         };
     Engine::Get()->PushAsync(
         push_to_servers,
@@ -423,7 +443,7 @@ class KVStoreDist : public KVStoreLocal {
         {},
         FnProperty::kNormal,
         priority,
-        PROFILER_MESSAGE("KVStoreDistDefaultPush"));
+        nullptr);
   }
 
   // push row sparse gradient

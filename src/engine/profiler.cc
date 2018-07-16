@@ -183,7 +183,7 @@ void Profiler::DumpProfile() {
       CHECK_NOTNULL(_opr_stat);
       std::unique_ptr<OprExecStat> opr_stat(_opr_stat);  // manage lifecycle
       uint32_t pid = i;
-      uint32_t tid = opr_stat->thread_id;
+      uint32_t tid = (opr_stat->key>=0)?opr_stat->key:opr_stat->thread_id;
 
       if (first_flag) {
         first_flag = false;
@@ -222,7 +222,6 @@ inline uint64_t NowInUsec() {
 
 void SetOprStart(OprExecStat* opr_stat) {
   if (!opr_stat) {
-    LOG(WARNING) << "SetOpStart: nullptr";
     return;
   }
   opr_stat->opr_start_rel_micros = NowInUsec() - Profiler::Get()->GetInitTime();
@@ -230,10 +229,21 @@ void SetOprStart(OprExecStat* opr_stat) {
 
 void SetOprEnd(OprExecStat* opr_stat) {
   if (!opr_stat) {
-    LOG(WARNING) << "SetOpEnd: nullptr";
     return;
   }
   opr_stat->opr_end_rel_micros   = NowInUsec() - Profiler::Get()->GetInitTime();
+}
+
+OprExecStat* SetOprStart(std::string &name) {
+  OprExecStat *opr_stat = nullptr;
+#if MXNET_USE_PROFILER
+  Profiler *profiler = Profiler::Get();
+  if (profiler->GetState() == Profiler::ProfilerState::kRunning) {
+      opr_stat = profiler->AddOprStat(Context::kCPUPinned, 0, name);
+      SetOprStart(opr_stat);
+  }
+#endif
+  return opr_stat;
 }
 
 }  // namespace engine
