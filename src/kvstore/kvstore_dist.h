@@ -226,12 +226,6 @@ class KVStoreDist : public KVStoreLocal {
         // convert to ps keys
         size_t size = recv_buf.shape().Size();
 
-        std::string name = "__Pull__"  + reverse_str_key_dict_[key] + "__" + std::to_string(size);
-        auto opr_stat = engine::SetOprStart(name);
-        if (opr_stat) {
-            opr_stat->key = key;
-        }
-
         PSKV& pskv = (gradient_compression_->get_type() == CompressionType::kNone) ?
                       EncodeDefaultKey(key, size, false) :
                       EncodeCompressedKey(key, size, false);
@@ -248,6 +242,14 @@ class KVStoreDist : public KVStoreLocal {
         int len=0;
         auto *counter = new std::atomic<int>(pskv.keys.size());
         for (int i=0; i<pskv.keys.size(); i++) {
+            std::string name = "__Pull__"  + reverse_str_key_dict_[key]
+                                + "__" + std::to_string(pskv.keys[i])
+                                + "__" + std::to_string(pskv.lens[i]);
+            auto opr_stat = engine::SetOprStart(name);
+            if (opr_stat) {
+                opr_stat->key = key;
+            }
+
             auto vs = new ps::SArray<real_t>(std::move(vals->segment(len, len+pskv.lens[i])));
             auto ls = new ps::SArray<int>(std::move(pskv.lens.segment(i, i+1)));
             CHECK_NOTNULL(ps_worker_)->ZPull(
@@ -432,12 +434,6 @@ class KVStoreDist : public KVStoreLocal {
           // convert to ps keys
           size_t size = send_buf.shape().Size();
 
-          std::string name = "__Push__"  + reverse_str_key_dict_[key] + "__" + std::to_string(size);
-          auto opr_stat = engine::SetOprStart(name);
-          if(opr_stat) {
-              opr_stat->key = key;
-          }
-
           real_t* data = send_buf.data().dptr<real_t>();
 #if MKL_EXPERIMENTAL == 1
           mkl_set_tblob_eager_mode(send_buf.data());
@@ -447,6 +443,14 @@ class KVStoreDist : public KVStoreLocal {
           auto *counter = new std::atomic<int>(pskv.keys.size());
           int len=0;
           for (int i=0; i<pskv.keys.size(); i++) {
+              std::string name = "__Push__"  + reverse_str_key_dict_[key]
+                                    + "__" + std::to_string(pskv.keys[i])
+                                    + "__" + std::to_string(pskv.lens[i]);
+              auto opr_stat = engine::SetOprStart(name);
+              if(opr_stat) {
+                  opr_stat->key = key;
+              }
+
               CHECK_NOTNULL(ps_worker_)->ZPush(
                       pskv.keys.segment(i, i+1),
                       vals.segment(len, len+pskv.lens[i]),
