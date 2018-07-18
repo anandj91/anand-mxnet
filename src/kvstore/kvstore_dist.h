@@ -264,7 +264,7 @@ class KVStoreDist : public KVStoreLocal {
                             delete counter;
                             cb();
                         }
-                    }, priority);
+                    }, priority, opr_stat);
             len+=pskv.lens[i];
         }
       };
@@ -463,7 +463,7 @@ class KVStoreDist : public KVStoreLocal {
                                 delete counter;
                                 cb();
                             }
-                      }, priority);
+                      }, priority, opr_stat);
               len+=pskv.lens[i];
           }
         };
