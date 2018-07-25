@@ -594,7 +594,7 @@ class KVStoreDist : public KVStoreLocal {
       // a simple heuristic for load balance
       if (size < bigarray_bound_) {
         // send it to a single random picked server
-        int server = (key * 9973) % num_servers;
+        int server = (key * ((ps::Key) 9973)) % num_servers;
         ps::Key ps_key = krs[server].begin() + key;
         CHECK_LT(ps_key, krs[server].end());
         pskv.keys.push_back(ps_key);
