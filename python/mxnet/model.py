@@ -92,13 +92,16 @@ def _create_kvstore(kvstore, num_device, arg_params):
     if kv is None:
         update_on_kvstore = False
 
-    return (kv, update_on_kvstore)
+    return (kv, False)
 
 def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_on_kvstore):
     """Initialize kvstore"""
     for idx, param_on_devs in enumerate(param_arrays):
         name = param_names[idx]
         kvstore.init(name, arg_params[name])
+
+        kvstore._u[name] = nd.zeros(arg_params[name].shape, param_on_devs[0].context)
+        kvstore._v[name] = nd.zeros(arg_params[name].shape, param_on_devs[0].context)
 
         if update_on_kvstore:
             kvstore.pull(name, param_on_devs, priority=-idx)
@@ -142,9 +145,26 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
         arg_list, grad_list = pair
         if grad_list[0] is None:
             continue
+
+        assert(len(grad_list)==1)
+
         index = i
         if kvstore:
             name = param_names[index]
+            _u = kvstore._u[name]
+            _v = kvstore._v[name]
+
+            _u *= kvstore.mom
+            _g = grad_list[0]
+            _u += (kvstore.rescale_grad*_g)
+            _v += _u
+
+            thr = _v.abs().reshape((-1,)).sort(is_ascend=True)[int(_g.size*kvstore.s)]
+            mask = _v.abs() > thr
+            _g[:] = _v * mask
+            _u *= (1-mask)
+            _v *= (1-mask)
+
             # push gradient, priority is negative index
             kvstore.push(name, grad_list, priority=-index)
             # pull back the sum gradients, to the same locations.

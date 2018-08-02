@@ -502,6 +502,11 @@ class Module(BaseModule):
         if kvstore and 'dist' in kvstore.type and '_sync' in kvstore.type:
             batch_size *= kvstore.num_workers
         rescale_grad = 1.0/batch_size
+        kvstore.rescale_grad = rescale_grad
+        rescale_grad = 1
+        if optimizer_params['momentum'] is not None:
+            kvstore.mom = optimizer_params['momentum']
+            del optimizer_params['momentum']
 
         if isinstance(optimizer, str):
             idx2name = {}

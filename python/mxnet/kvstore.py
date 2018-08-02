@@ -22,6 +22,7 @@ from __future__ import absolute_import
 from array import array
 import ctypes
 import pickle
+from . import ndarray as nd
 from .ndarray import NDArray
 from .ndarray import _ndarray_cls
 from .base import _LIB, c_str_array, c_handle_array, c_array, c_array_buf, c_str
@@ -99,6 +100,11 @@ class KVStore(object):
         self._updater = None
         self._updater_func = None
         self._str_updater_func = None
+        self._u = {}
+        self._v = {}
+        self.mom = 0.9
+        self.s = 0.75
+        self.rescale_grad = None
 
     def __del__(self):
         check_call(_LIB.MXKVStoreFree(self.handle))
