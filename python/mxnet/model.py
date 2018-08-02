@@ -159,9 +159,11 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
             _u += (kvstore.rescale_grad*_g)
             _v += _u
 
-            thr = _v.abs().reshape((-1,)).sort(is_ascend=True)[int(_g.size*kvstore.s)]
-            mask = _v.abs() > thr
-            _g[:] = _v * mask
+            abslt = _v.abs()
+            tmp = abslt.reshape((-1,))
+            thr = tmp[tmp.topk(k=int(_g.size*(1-kvstore.s)))][-1]
+            mask = (abslt >= thr)
+            _g[:] = (_v * mask)
             _u *= (1-mask)
             _v *= (1-mask)
 
