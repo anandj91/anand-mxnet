@@ -102,9 +102,7 @@ class KVStore(object):
         self._str_updater_func = None
         self._u = {}
         self._v = {}
-        self.mom = 0.9
-        self.s = 0.75
-        self.rescale_grad = None
+        self.hyperparams = None
 
     def __del__(self):
         check_call(_LIB.MXKVStoreFree(self.handle))

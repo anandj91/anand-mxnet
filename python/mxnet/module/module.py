@@ -502,11 +502,18 @@ class Module(BaseModule):
         if kvstore and 'dist' in kvstore.type and '_sync' in kvstore.type:
             batch_size *= kvstore.num_workers
         rescale_grad = 1.0/batch_size
-        kvstore.rescale_grad = rescale_grad
+
+        optimizer_params['rescale_grad'] = rescale_grad
         rescale_grad = 1
-        if optimizer_params['momentum'] is not None:
-            kvstore.mom = optimizer_params['momentum']
-            del optimizer_params['momentum']
+        optimizer_params['s'] = 0.75
+        if 'momentum' not in optimizer_params:
+            optimizer_params['momentum'] = 0.9
+        kvstore.hyperparams = optimizer_params
+        optimizer_params = {
+            'rescale_grad': 1,
+            'learning_rate': kvstore.hyperparams['learning_rate'],
+            'wd': kvstore.hyperparams['wd'] if 'wd' in kvstore.hyperparams else 0,
+        }
 
         if isinstance(optimizer, str):
             idx2name = {}
@@ -517,8 +524,6 @@ class Module(BaseModule):
                     idx2name.update({i*len(self._context)+k: n
                                      for i, n in enumerate(self._exec_group.param_names)})
             optimizer_params = dict(optimizer_params)
-            if 'rescale_grad' not in optimizer_params:
-                optimizer_params['rescale_grad'] = rescale_grad
             optimizer = opt.create(optimizer,
                                    sym=self.symbol, param_idx2name=idx2name,
                                    **optimizer_params)

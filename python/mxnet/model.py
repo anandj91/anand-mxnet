@@ -141,13 +141,17 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
         kvstore.pull(name, arg_list, priority=-index)
 
 def _update_local_params(kvstore, _u, _v, _g):
-    _u *= kvstore.mom
-    _u += (kvstore.rescale_grad*_g)
+    mom = kvstore.hyperparams['momentum']
+    rescale_grad = kvstore.hyperparams['rescale_grad']
+    s = kvstore.hyperparams['s']
+
+    _u *= mom
+    _u += (rescale_grad*_g)
     _v += _u
 
     abslt = _v.abs()
     tmp = abslt.reshape((-1,))
-    thr = tmp[tmp.topk(k=int(_g.size*(1-kvstore.s)))][-1]
+    thr = tmp[tmp.topk(k=int(_g.size*(1-s)))][-1]
     mask = (abslt >= thr)
     _g[:] = (_v * mask)
     _u *= (1-mask)
