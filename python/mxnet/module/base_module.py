@@ -532,6 +532,10 @@ class BaseModule(object):
 
             # end of 1 epoch, reset the data-iter for another epoch
             train_data.reset()
+            self.epoch_end(epoch)
+
+    def epoch_end(epoch):
+        raise NotImplementedError()
 
     ################################################################################
     # Symbol information

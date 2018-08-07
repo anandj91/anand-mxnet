@@ -505,7 +505,6 @@ class Module(BaseModule):
 
         optimizer_params['rescale_grad'] = rescale_grad
         rescale_grad = 1
-        optimizer_params['s'] = 0.75
         if 'momentum' not in optimizer_params:
             optimizer_params['momentum'] = 0.9
         kvstore.hyperparams = optimizer_params
@@ -514,6 +513,8 @@ class Module(BaseModule):
             'learning_rate': kvstore.hyperparams['learning_rate'],
             'wd': kvstore.hyperparams['wd'] if 'wd' in kvstore.hyperparams else 0,
         }
+        if 'lr_scheduler' in kvstore.hyperparams:
+            optimizer_params['lr_scheduler'] = kvstore.hyperparams['lr_scheduler']
 
         if isinstance(optimizer, str):
             idx2name = {}
@@ -561,6 +562,9 @@ class Module(BaseModule):
         if self._preload_opt_states is not None:
             self.load_optimizer_states(self._preload_opt_states)
             self._preload_opt_states = None
+
+    def epoch_end(self, epoch):
+        self._kvstore.epoch = epoch
 
     def borrow_optimizer(self, shared_module):
         """Borrows optimizer from a shared module. Used in bucketing, where exactly the same

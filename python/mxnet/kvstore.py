@@ -29,6 +29,7 @@ from .base import _LIB, c_str_array, c_handle_array, c_array, c_array_buf, c_str
 from .base import check_call, string_types, mx_uint, py_str
 from .base import NDArrayHandle, KVStoreHandle
 from . import optimizer as opt
+from .lr_scheduler import LRScheduler
 
 def _ctype_key_value(keys, vals):
     """
@@ -103,6 +104,8 @@ class KVStore(object):
         self._u = {}
         self._v = {}
         self.hyperparams = None
+        self.sparsity = [0.75]
+        self.epoch = 0
 
     def __del__(self):
         check_call(_LIB.MXKVStoreFree(self.handle))
