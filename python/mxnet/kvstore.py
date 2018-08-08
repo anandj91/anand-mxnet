@@ -104,7 +104,6 @@ class KVStore(object):
         self._u = {}
         self._v = {}
         self.hyperparams = None
-        self.sparsity = [0.75]
         self.epoch = 0
 
     def __del__(self):

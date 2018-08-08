@@ -33,6 +33,7 @@ from ..model import load_checkpoint
 from ..initializer import Uniform, InitDesc
 from ..io import DataDesc
 from ..ndarray import zeros
+from ..lr_scheduler import DGCLRScheduler
 
 from .base_module import BaseModule, _check_input_names, _parse_data_desc
 
@@ -503,6 +504,9 @@ class Module(BaseModule):
             batch_size *= kvstore.num_workers
         rescale_grad = 1.0/batch_size
 
+        # DGC INIT
+        sparsity = [0.75, 0.9375, 0.984375, 0.996, 0.999]
+        optimizer_params['s'] = sparsity
         optimizer_params['rescale_grad'] = rescale_grad
         rescale_grad = 1
         if 'momentum' not in optimizer_params:
@@ -512,9 +516,8 @@ class Module(BaseModule):
             'rescale_grad': 1,
             'learning_rate': kvstore.hyperparams['learning_rate'],
             'wd': kvstore.hyperparams['wd'] if 'wd' in kvstore.hyperparams else 0,
+            'lr_scheduler': DGCLRScheduler(kvstore.hyperparams['lr_scheduler'], stride=400, lim=1600, sparsity=sparsity)
         }
-        if 'lr_scheduler' in kvstore.hyperparams:
-            optimizer_params['lr_scheduler'] = kvstore.hyperparams['lr_scheduler']
 
         if isinstance(optimizer, str):
             idx2name = {}

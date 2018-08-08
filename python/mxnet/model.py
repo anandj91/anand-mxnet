@@ -143,7 +143,8 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
 def _update_local_params(kvstore, _u, _v, _g):
     mom = kvstore.hyperparams['momentum']
     rescale_grad = kvstore.hyperparams['rescale_grad']
-    s = kvstore.sparsity[kvstore.epoch] if kvstore.epoch < len(kvstore.sparsity) else kvstore.sparsity[-1]
+    sparsity = kvstore.hyperparams['s']
+    s = sparsity[kvstore.epoch] if kvstore.epoch < len(sparsity) else sparsity[-1]
 
     _u *= mom
     _u += (rescale_grad*_g)

@@ -136,3 +136,23 @@ class MultiFactorScheduler(LRScheduler):
             else:
                 return self.base_lr
         return self.base_lr
+
+class DGCLRScheduler(LRScheduler):
+    def __init__(self, lr_scheduler, stride=1, lim=0, sparsity=[0.75]):
+        super(DGCLRScheduler, self).__init__()
+        self.lrs = lr_scheduler
+        self.stride = stride
+        self.lim = lim
+        self.sparsity = sparsity
+
+    def __call__(self, num_update):
+        if num_update >= self.lim:
+            if self.lrs is None:
+                return self.base_lr
+            else:
+                return self.lrs(num_update)
+            return lr_scheduler(num_update)
+        else:
+            index = int(num_update/self.stride)
+            s = self.sparsity[index] if index<len(self.sparsity) else self.sparsity[-1]
+            return 0.00001 * (1-self.sparsity[0])/(1-s)
