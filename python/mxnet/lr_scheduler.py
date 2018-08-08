@@ -145,14 +145,23 @@ class DGCLRScheduler(LRScheduler):
         self.lim = lim
         self.sparsity = sparsity
 
+        # For Logging
+        self.prev_lr = 0
+
     def __call__(self, num_update):
         if num_update >= self.lim:
             if self.lrs is None:
-                return self.base_lr
+                lr = self.base_lr
             else:
-                return self.lrs(num_update)
-            return lr_scheduler(num_update)
+                self.lrs.base_lr = self.base_lr
+                lr = self.lrs(num_update)
         else:
             index = int(num_update/self.stride)
             s = self.sparsity[index] if index<len(self.sparsity) else self.sparsity[-1]
-            return 0.00001 * (1-self.sparsity[0])/(1-s)
+            lr = 0.00001 * (1-self.sparsity[0])/(1-s)
+
+        if self.prev_lr != lr:
+            self.prev_lr = lr
+            logging.info("Learning rate: %f" % lr)
+
+        return lr

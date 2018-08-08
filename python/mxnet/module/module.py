@@ -516,7 +516,7 @@ class Module(BaseModule):
             'rescale_grad': 1,
             'learning_rate': kvstore.hyperparams['learning_rate'],
             'wd': kvstore.hyperparams['wd'] if 'wd' in kvstore.hyperparams else 0,
-            'lr_scheduler': DGCLRScheduler(kvstore.hyperparams['lr_scheduler'], stride=400, lim=1600, sparsity=sparsity)
+            'lr_scheduler': DGCLRScheduler(kvstore.hyperparams['lr_scheduler'], stride=400, lim=2000, sparsity=sparsity)
         }
 
         if isinstance(optimizer, str):
