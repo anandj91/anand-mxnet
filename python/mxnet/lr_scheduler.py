@@ -149,11 +149,13 @@ class DGCLRScheduler(LRScheduler):
         self.prev_lr = 0
 
     def __call__(self, num_update):
+        if self.prev_lr == 0: # Proxy for first call
+            self.lrs.base_lr = self.base_lr
+
         if num_update >= self.lim:
             if self.lrs is None:
                 lr = self.base_lr
             else:
-                self.lrs.base_lr = self.base_lr
                 lr = self.lrs(num_update)
         else:
             index = int(num_update/self.stride)
