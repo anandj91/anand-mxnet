@@ -508,15 +508,15 @@ class Module(BaseModule):
         sparsity = [0.75, 0.9375, 0.984375, 0.996, 0.999]
         optimizer_params['s'] = sparsity
         optimizer_params['rescale_grad'] = rescale_grad
-        rescale_grad = 1
         if 'momentum' not in optimizer_params:
             optimizer_params['momentum'] = 0.9
         kvstore.hyperparams = optimizer_params
         optimizer_params = {
-            'rescale_grad': 1,
+            'rescale_grad': rescale_grad,
             'learning_rate': kvstore.hyperparams['learning_rate'],
             'wd': kvstore.hyperparams['wd'] if 'wd' in kvstore.hyperparams else 0,
-            'lr_scheduler': DGCLRScheduler(kvstore.hyperparams['lr_scheduler'], stride=400, lim=2000, sparsity=sparsity)
+            'momentum': kvstore.hyperparams['momentum'],
+            'lr_scheduler': DGCLRScheduler(kvstore.hyperparams['lr_scheduler'], stride=400, lim=0, sparsity=sparsity)
         }
 
         if isinstance(optimizer, str):

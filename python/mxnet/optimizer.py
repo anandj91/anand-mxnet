@@ -506,8 +506,11 @@ class SGD(Optimizer):
         lr = self._get_lr(index)
         wd = self._get_wd(index)
 
-        kwargs = {'rescale_grad': self.rescale_grad}
-        if self.momentum > 0:
+        if grad.size < 2048:
+            kwargs = {'rescale_grad': self.rescale_grad}
+        else:
+            kwargs = {'rescale_grad': 1}
+        if self.momentum > 0 and grad.size < 2048:
             kwargs['momentum'] = self.momentum
         if self.clip_gradient:
             kwargs['clip_gradient'] = self.clip_gradient

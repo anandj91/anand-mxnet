@@ -174,7 +174,8 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
             name = param_names[index]
             for _u, _v, _g in zip(kvstore._u[name], kvstore._v[name], grad_list):
                 #logging.info("Non-zeros before: %d/%d" % ((_g!=0).sum().asscalar(), _g.size))
-                _update_local_params(kvstore, _u, _v, _g)
+                if _g.size >= 2048:
+                    _update_local_params(kvstore, _u, _v, _g)
                 #logging.info("Non-zeros after: %d/%d" % ((_g!=0).sum().asscalar(), _g.size))
 
             # push gradient, priority is negative index
