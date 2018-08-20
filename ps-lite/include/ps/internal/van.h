@@ -132,6 +132,8 @@ class Van {
   std::atomic<int> timestamp_{0};
   DISALLOW_COPY_AND_ASSIGN(Van);
   ThreadsafeQueue send_queue_;
+  ThreadsafeStack<Message> send_stack_;
+  std::atomic<int> prio_count_{0};
 };
 }  // namespace ps
 #endif  // PS_INTERNAL_VAN_H_
