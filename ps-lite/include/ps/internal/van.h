@@ -69,11 +69,15 @@ class Van {
    */
   bool IsReady() { return ready_; }
 
+  /** thread function for receving */
+  void Receiving(int id = -1);
+
  protected:
   /**
    * \brief connect to a node
    */
   virtual void Connect(const Node& node) = 0;
+  virtual void PGMConnect(const Node& node) = 0;
   /**
    * \brief bind to my node
    * do multiple retries on binding the port. since it's possible that
@@ -81,16 +85,17 @@ class Van {
    * \return return the port binded, -1 if failed.
    */
   virtual int Bind(const Node& node, int max_retry) = 0;
+  virtual int PGMBind(const Node& node, int max_retry) = 0;
   /**
    * \brief block until received a message
    * \return the number of bytes received. -1 if failed or timeout
    */
-  virtual int RecvMsg(Message* msg) = 0;
+  virtual int RecvMsg(Message* msg, int id = -1) = 0;
   /**
    * \brief send a mesage
    * \return the number of bytes sent
    */
-  virtual int SendMsg(const Message& msg) = 0;
+  virtual int SendMsg(const Message& msg, bool use_pgm = false) = 0;
   /**
    * \brief pack meta into a string
    */
@@ -104,9 +109,9 @@ class Van {
   Node my_node_;
   bool is_scheduler_;
 
+  std::unordered_map<int, std::unique_ptr<std::thread>> pgm_receiver_threads_;
+
  private:
-  /** thread function for receving */
-  void Receiving();
   /** thread function for heartbeat */
   void Heartbeat();
   /** whether it is ready for sending */

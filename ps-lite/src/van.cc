@@ -67,6 +67,7 @@ void Van::Start() {
     my_node_.hostname = ip;
     my_node_.role     = role;
     my_node_.port     = port;
+    my_node_.pgm_port     = port + 1;
     // cannot determine my id now, the scheduler will assign it later
     // set it explicitly to make re-register within a same process possible
     my_node_.id = Node::kEmpty;
@@ -76,6 +77,10 @@ void Van::Start() {
   my_node_.port = Bind(my_node_, is_scheduler_ ? 0 : 40);
   PS_VLOG(1) << "Bind to " << my_node_.DebugString();
   CHECK_NE(my_node_.port, -1) << "bind failed";
+  if (!is_scheduler_) {
+      my_node_.pgm_port = PGMBind(my_node_, 40);
+      CHECK_NE(my_node_.pgm_port, -1) << "bind failed";
+  }
 
   // connect to the scheduler
   Connect(scheduler_);
@@ -86,7 +91,7 @@ void Van::Start() {
   }
   // start receiver
   receiver_thread_ = std::unique_ptr<std::thread>(
-      new std::thread(&Van::Receiving, this));
+      new std::thread(&Van::Receiving, this, -1));
 
   if (!is_scheduler_) {
     // let the scheduler know myself
@@ -141,14 +146,14 @@ int Van::Send(const Message& msg) {
   return send_bytes;
 }
 
-void Van::Receiving() {
+void Van::Receiving(int id) {
   const char* heartbeat_timeout_val = Environment::Get()->find("PS_HEARTBEAT_TIMEOUT");
   const int heartbeat_timeout
       = heartbeat_timeout_val ? atoi(heartbeat_timeout_val) : kDefaultHeartbeatInterval;
   Meta nodes;  // for scheduler usage
   while (true) {
     Message msg;
-    int recv_bytes = RecvMsg(&msg);
+    int recv_bytes = RecvMsg(&msg, id);
 
     // For debug, drop received message
     if (ready_ && drop_rate_ > 0) {
@@ -279,6 +284,7 @@ void Van::Receiving() {
         } else {
           for (const auto& node : ctrl.node) {
             Connect(node);
+            PGMConnect(node);
             if (!node.is_recovery && node.role == Node::SERVER) ++num_servers_;
             if (!node.is_recovery && node.role == Node::WORKER) ++num_workers_;
           }
@@ -359,6 +365,7 @@ void Van::PackMeta(const Meta& meta, char** meta_buf, int* buf_size) {
       p->set_id(n.id);
       p->set_role(n.role);
       p->set_port(n.port);
+      p->set_pgm_port(n.pgm_port);
       p->set_hostname(n.hostname);
       p->set_is_recovery(n.is_recovery);
     }
@@ -399,6 +406,7 @@ void Van::UnpackMeta(const char* meta_buf, int buf_size, Meta* meta) {
       Node n;
       n.role = static_cast<Node::Role>(p.role());
       n.port = p.port();
+      n.pgm_port = p.pgm_port();
       n.hostname = p.hostname();
       n.id = p.has_id() ? p.id() : Node::kEmpty;
       n.is_recovery = p.is_recovery();

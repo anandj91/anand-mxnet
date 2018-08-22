@@ -23,7 +23,7 @@ ${ZMQ}:
 	$(eval DIR=zeromq-4.1.4)
 	rm -rf $(FILE) $(DIR)
 	$(WGET) $(URL)/$(FILE) && tar --no-same-owner -zxf $(FILE)
-	cd $(DIR) && export CFLAGS=-fPIC && export CXXFLAGS=-fPIC && ./configure -prefix=$(DEPS_PATH) --with-libsodium=no --with-libgssapi_krb5=no && $(MAKE) && $(MAKE) install
+	cd $(DIR) && export CFLAGS=-fPIC && export CXXFLAGS=-fPIC && ./configure -prefix=$(DEPS_PATH) --with-pgm --with-libsodium=no --with-libgssapi_krb5=no && $(MAKE) && $(MAKE) install
 	rm -rf $(FILE) $(DIR)
 
 # lz4

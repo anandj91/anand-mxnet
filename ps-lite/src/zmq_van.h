@@ -58,6 +58,27 @@ class ZMQVan : public Van {
     zmq_ctx_destroy(context_);
   }
 
+  int PGMBind(const Node& node, int max_retry) override {
+    pgm_receiver_ = zmq_socket(context_, ZMQ_PUB);
+    CHECK(pgm_receiver_ != NULL)
+        << "create receiver socket failed: " << zmq_strerror(errno);
+    int local = GetEnv("DMLC_LOCAL", 0);
+    std::string hostname = node.hostname.empty() ? "*" : node.hostname;
+    std::string addr = local ? "ipc:///tmp/" : "tcp://" + hostname + ":";
+    int port = node.pgm_port;
+    unsigned seed = static_cast<unsigned>(time(NULL)+port);
+    for (int i = 0; i < max_retry+1; ++i) {
+      auto address = addr + std::to_string(port);
+      if (zmq_bind(pgm_receiver_, address.c_str()) == 0) break;
+      if (i == max_retry) {
+        port = -1;
+      } else {
+        port = 10000 + rand_r(&seed) % 40000;
+      }
+    }
+    return port;
+  }
+
   int Bind(const Node& node, int max_retry) override {
     receiver_ = zmq_socket(context_, ZMQ_ROUTER);
     CHECK(receiver_ != NULL)
@@ -77,6 +98,42 @@ class ZMQVan : public Van {
       }
     }
     return port;
+  }
+
+  void PGMConnect(const Node& node) override {
+    CHECK_NE(node.id, node.kEmpty);
+    CHECK_NE(node.port, node.kEmpty);
+    CHECK(node.hostname.size());
+    int id = node.id;
+    auto it = pgm_senders_.find(id);
+    if (it != pgm_senders_.end()) {
+      zmq_close(it->second);
+    }
+    // worker doesn't need to connect to the other workers. same for server
+    if ((node.role == my_node_.role) &&
+        (node.id != my_node_.id)) {
+      return;
+    }
+    void *sender = zmq_socket(context_, ZMQ_SUB);
+    CHECK(sender != NULL)
+        << zmq_strerror(errno)
+        << ". it often can be solved by \"sudo ulimit -n 65536\""
+        << " or edit /etc/security/limits.conf";
+    if (my_node_.id != Node::kEmpty) {
+      std::string my_id = "pgm_ps" + std::to_string(my_node_.id);
+      zmq_setsockopt(sender, ZMQ_IDENTITY, my_id.data(), my_id.size());
+      zmq_setsockopt(sender, ZMQ_SUBSCRIBE, "", 0);
+    }
+    // connect
+    std::string addr = "tcp://" + node.hostname + ":" + std::to_string(node.pgm_port);
+    if (GetEnv("DMLC_LOCAL", 0)) {
+      addr = "ipc:///tmp/" + std::to_string(node.pgm_port);
+    }
+    if (zmq_connect(sender, addr.c_str()) != 0) {
+      LOG(FATAL) <<  "connect to " + addr + " failed: " + zmq_strerror(errno);
+    }
+    pgm_senders_[id] = sender;
+    pgm_receiver_threads_[id] = std::unique_ptr<std::thread>(new std::thread(&Van::Receiving, this, id));
   }
 
   void Connect(const Node& node) override {
@@ -113,17 +170,23 @@ class ZMQVan : public Van {
     senders_[id] = sender;
   }
 
-  int SendMsg(const Message& msg) override {
+  int SendMsg(const Message& msg, bool use_pgm) override {
     std::lock_guard<std::mutex> lk(mu_);
     // find the socket
     int id = msg.meta.recver;
-    CHECK_NE(id, Meta::kEmpty);
-    auto it = senders_.find(id);
-    if (it == senders_.end()) {
-      LOG(WARNING) << "there is no socket to node " << id;
-      return -1;
+    void *socket = nullptr;
+    if (use_pgm) {
+        socket = pgm_receiver_;
+    } else {
+        CHECK_NE(id, Meta::kEmpty);
+        auto it = senders_.find(id);
+        if (it == senders_.end()) {
+            LOG(WARNING) << "there is no socket to node " << id;
+            return -1;
+        }
+        socket = it->second;
     }
-    void *socket = it->second;
+    CHECK_NOTNULL(socket);
 
     // send meta
     int meta_size; char* meta_buf;
@@ -164,14 +227,21 @@ class ZMQVan : public Van {
     return send_bytes;
   }
 
-  int RecvMsg(Message* msg) override {
+  int RecvMsg(Message* msg, int id) override {
     msg->data.clear();
     size_t recv_bytes = 0;
+    void* receiver;
+    if (id < 0) {
+        receiver = receiver_;
+    } else {
+        receiver = pgm_senders_[id];
+    }
+    CHECK_NOTNULL(receiver);
     for (int i = 0; ; ++i) {
       zmq_msg_t* zmsg = new zmq_msg_t;
       CHECK(zmq_msg_init(zmsg) == 0) << zmq_strerror(errno);
       while (true) {
-        if (zmq_msg_recv(zmsg, receiver_, 0) != -1) break;
+        if (zmq_msg_recv(zmsg, receiver, 0) != -1) break;
         if (errno == EINTR) continue;
         LOG(WARNING) << "failed to receive message. errno: "
                      << errno << " " << zmq_strerror(errno);
@@ -235,8 +305,10 @@ class ZMQVan : public Van {
    * \brief node_id to the socket for sending data to this node
    */
   std::unordered_map<int, void*> senders_;
+  std::unordered_map<int, void*> pgm_senders_;
   std::mutex mu_;
   void *receiver_ = nullptr;
+  void *pgm_receiver_ = nullptr;
 };
 }  // namespace ps
 

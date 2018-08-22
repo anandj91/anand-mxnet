@@ -92,6 +92,7 @@ struct Node {
   std::string hostname;
   /** \brief the port this node is binding */
   int port;
+  int pgm_port;
   /** \brief whether this node is created by failover */
   bool is_recovery;
 };
