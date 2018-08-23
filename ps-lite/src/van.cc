@@ -136,7 +136,7 @@ void Van::Stop() {
 
 int Van::Send(const Message& msg) {
   mxnet::engine::SetOprStart(msg.meta.opr_stat);
-  int send_bytes = SendMsg(msg);
+  int send_bytes = SendMsg(msg, (!msg.meta.request && msg.meta.push));
   CHECK_NE(send_bytes, -1);
   send_bytes_ += send_bytes;
   if (resender_) resender_->AddOutgoing(msg);

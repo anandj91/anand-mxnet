@@ -201,16 +201,15 @@ class KVStoreDistServer {
         LOG(INFO) << "sync response to " << merged->request.size() << " workers";
       }
       stored->WaitToRead();
-      for (const auto& req : merged->request) {
-        ps::KVPairs<real_t> res;
-        size_t size = stored->shape().Size();
-        real_t* data = stored->data().dptr<real_t>();
-        ps::SArray<real_t> vals(data, size, false);
-        res.keys.push_back(key);
-        res.vals = vals;
-        res.lens.push_back(size);
-        server->Response(req, res);
-      }
+      ps::KVPairs<real_t> res;
+      const auto& req = merged->request[0];
+      size_t size = stored->shape().Size();
+      real_t* data = stored->data().dptr<real_t>();
+      ps::SArray<real_t> vals(data, size, false);
+      res.keys.push_back(key);
+      res.vals = vals;
+      res.lens.push_back(size);
+      server->Response(req, res);
       merged->request.clear();
     } else {
       merged->array.WaitToRead();
