@@ -67,6 +67,8 @@ class KVWorker : public SimpleApp {
    */
   using Callback = std::function<void()>;
 
+  std::unordered_map<ps::Key, int> key_to_ts;
+
   /**
    * \brief constructor
    *
@@ -185,6 +187,11 @@ class KVWorker : public SimpleApp {
             int priority = 0,
             mxnet::engine::OprExecStat *opr_stat = nullptr) {
     int ts = obj_->NewRequest(kServerGroup);
+    mu_.lock();
+    CHECK(key_to_ts.find(keys[0]) == key_to_ts.end());
+    key_to_ts[keys[0]] = ts;
+    mu_.unlock();
+
     AddCallback(ts, [this, ts, keys, vals, lens, cb]() mutable {
       if (recv_kvs_.find(ts) != recv_kvs_.end()) {
         mu_.lock();
@@ -564,6 +571,12 @@ void KVWorker<Val>::Process(const Message& msg) {
       kvs.lens = msg.data[2];
     }
     mu_.lock();
+    if (!msg.meta.request && msg.meta.push) {
+        CHECK(key_to_ts.find(kvs.keys[0]) != key_to_ts.end());
+        CHECK_EQ(key_to_ts[kvs.keys[0]], ts);
+        ts = key_to_ts[kvs.keys[0]];
+        key_to_ts.erase(kvs.keys[0]);
+    }
     recv_kvs_[ts].push_back(kvs);
     mu_.unlock();
   }
