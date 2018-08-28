@@ -138,12 +138,12 @@ class MultiFactorScheduler(LRScheduler):
         return self.base_lr
 
 class DGCLRScheduler(LRScheduler):
-    def __init__(self, lr_scheduler, stride=1, lim=0, sparsity=[0.75]):
+    def __init__(self, lr_scheduler, stride=1, lim=0, rates=[0.1]):
         super(DGCLRScheduler, self).__init__()
         self.lrs = lr_scheduler
         self.stride = stride
         self.lim = lim
-        self.sparsity = sparsity
+        self.rates = rates
 
         # For Logging
         self.prev_lr = 0
@@ -159,8 +159,10 @@ class DGCLRScheduler(LRScheduler):
                 lr = self.lrs(num_update)
         else:
             index = int(num_update/self.stride)
-            s = self.sparsity[index] if index<len(self.sparsity) else self.sparsity[-1]
-            lr = 0.00001 * (1-self.sparsity[0])/(1-s)
+            try:
+                lr = self.rates[index]
+            except KeyError:
+                lr = self.rates[-1]
 
         if self.prev_lr != lr:
             self.prev_lr = lr
