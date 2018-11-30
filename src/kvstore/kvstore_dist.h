@@ -256,7 +256,7 @@ class KVStoreDist : public KVStoreLocal {
           pull_from_servers,
           pinned_ctx_,
           {},
-          {recv_buf.var()},
+          {},
           FnProperty::kNormal,
           priority,
           nullptr);
