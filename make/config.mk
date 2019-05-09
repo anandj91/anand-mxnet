@@ -48,7 +48,7 @@ DEV = 0
 DEBUG = 0
 
 # whether compile with profiler
-USE_PROFILER = 1
+USE_PROFILER = 0
 
 # whether to turn on segfault signal handler to log the stack trace
 USE_SIGNAL_HANDLER =
