@@ -21,7 +21,6 @@ Train mnist, see more explanation at http://mxnet.io/tutorials/python/mnist.html
 import os
 import argparse
 import logging
-logging.basicConfig(level=logging.DEBUG)
 from common import find_mxnet, fit
 from common.util import download_file
 import mxnet as mx
