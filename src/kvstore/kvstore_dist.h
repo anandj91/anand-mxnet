@@ -595,18 +595,18 @@ class KVStoreDist : public KVStoreLocal {
       /**
        * Round-Robin key assignment
        */
-      size_t tot_size = pskv_size;
+      int params = num_arr_elems;
       static ps::Key server = 0;
-      while (tot_size > 0) {
+      while (params > 0) {
         ps::Key ps_key = krs[server%num_servers].begin()
                          + (ps::Key)(key + server/num_servers);
         CHECK_LT(ps_key, krs[server%num_servers].end());
         pskv.keys.push_back(ps_key);
-        const int part_size = ((tot_size > bigarray_bound_)?bigarray_bound_:tot_size) * num_bytes;
+        const size_t part_size = ((params > bigarray_bound_)?bigarray_bound_:params) * num_bytes;
         pskv.lens.push_back(part_size);
         pskv.size += part_size;
 
-        tot_size -= part_size;
+        params -= part_size;
         server++;
       }
 
