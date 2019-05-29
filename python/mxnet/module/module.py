@@ -505,7 +505,7 @@ class Module(BaseModule):
         rescale_grad = 1.0/batch_size
 
         # DGC INIT
-        sparsity = [0.75, 0.9375, 0.984375, 0.996, 0.999]
+        sparsity = [0.999]
         optimizer_params['s'] = sparsity
         optimizer_params['rescale_grad'] = rescale_grad
         if 'momentum' not in optimizer_params:

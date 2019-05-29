@@ -54,10 +54,10 @@ USE_PROFILER = 1
 USE_SIGNAL_HANDLER =
 
 # the additional link flags you want to add
-ADD_LDFLAGS =
+ADD_LDFLAGS = -L/pkgs/cudnn-10.0-v7.4.2/lib64 -L${HOME}/bin/opencv/lib -L${HOME}/bin/openblas/lib -lopencv_calib3d -lopencv_core -lopencv_features2d -lopencv_flann -lopencv_dnn -lopencv_highgui -lopencv_imgproc -lopencv_imgcodecs -lopencv_ml -lopencv_shape -lopencv_objdetect -lopencv_photo -lopencv_stitching -lopencv_superres -lopencv_shape -lopencv_video -lopencv_videostab -lopencv_videoio -lopencv_viz
 
 # the additional compile flags you want to add
-ADD_CFLAGS =
+ADD_CFLAGS = -fpermissive -I/pkgs/cudnn-10.0-v7.4.2/include -I/${HOME}/bin/openblas/include -I${HOME}/bin/opencv/include/
 
 #---------------------------------------------
 # matrix computation libraries for CPU/GPU
@@ -68,7 +68,7 @@ USE_CUDA = 1
 
 # add the path to CUDA library to link and compile flag
 # if you have already add them to environment variable, leave it as NONE
-USE_CUDA_PATH = /usr/local/cuda
+USE_CUDA_PATH = /pkgs/cuda-10.0
 # USE_CUDA_PATH = NONE
 
 # whether to enable CUDA runtime compilation
