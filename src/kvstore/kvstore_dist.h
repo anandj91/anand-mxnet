@@ -192,6 +192,9 @@ class KVStoreDist : public KVStoreLocal {
     CheckUnique(keys);
     for (size_t i = 0; i < keys.size(); ++i) {
       comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
+      //TODO: Comment
+      EncodePriorityKey(keys[i], values[i].shape().Size(),
+              mshadow::mshadow_sizeof(values[i].dtype()));
     }
     if (get_rank() == 0 && this->ps_worker_->get_customer()->customer_id() == 0) {
       Push_(keys, values, 0, false);
