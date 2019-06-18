@@ -268,6 +268,60 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
+  void PullImpl(const std::vector<int>& keys,
+                const std::vector<NDArray*>& values,
+                int priority, bool ignore_sparse) override {
+    CHECK(ignore_sparse) << "dist kvstore pull doesn't support ignore_sparse=False";
+    std::vector<int> uniq_keys;
+    std::vector<std::vector<NDArray*> > grouped_vals;
+    GroupKVPairsPull(keys, values, &uniq_keys, &grouped_vals, true);
+
+    for (size_t i = 0; i < uniq_keys.size(); ++i) {
+      int key = uniq_keys[i];
+      // use the same array for merging to guarantee that pull always happens
+      // after the previous push on this key
+      auto& recv_buf = comm_buf_[key];
+      const auto storage_type = grouped_vals[i][0]->storage_type();
+      CHECK_EQ(storage_type, kDefaultStorage)
+               << "Expected stype of value to be kDefaultStorage";
+      if (recv_buf.is_none()) {
+        // it may happen for the first time a no-rank-0 worker pull the weight.
+        recv_buf = NDArray(grouped_vals[i][0]->shape(), pinned_ctx_,
+                           true, grouped_vals[i][0]->dtype());
+      }
+      auto pull_from_servers = [this, key, recv_buf](
+          RunContext rctx, Engine::CallbackOnComplete cb) {
+        // convert to ps keys
+        size_t size = recv_buf.shape().Size();
+        const int dtype = recv_buf.dtype();
+        const int num_bytes = mshadow::mshadow_sizeof(dtype);
+        PSKV& pskv = (gradient_compression_->get_type() == CompressionType::kNone) ?
+                      EncodeDefaultKey(key, size, num_bytes) :
+                      EncodeCompressedKey(key, size, false, num_bytes);
+        char* data = static_cast<char*> (recv_buf.data().dptr_);
+        // false means not to delete data when SArray is deleted
+        auto vals = new ps::SArray<char>(data, size * num_bytes, false);
+        // issue pull
+        RequestType mode = (gradient_compression_->get_type() != CompressionType::kNone) ?
+                  RequestType::kCompressedPushPull : RequestType::kDefaultPushPull;
+        const int cmd = GetCommandType(mode, dtype);
+        CHECK_NOTNULL(ps_worker_)->ZPull(
+          pskv.keys, vals, &pskv.lens, cmd, [vals, cb](){ delete vals; cb(); });
+      };
+
+      CHECK_NOTNULL(Engine::Get())->PushAsync(
+          pull_from_servers,
+          pinned_ctx_,
+          {},
+          {recv_buf.var()},
+          FnProperty::kNormal,
+          priority,
+          "KVStoreDistDefaultStoragePull");
+
+      comm_->Broadcast(key, recv_buf, grouped_vals[i], priority);
+    }
+  }
+
   void PullRowSparseImpl(const std::vector<int>& keys,
                          const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
                          int priority = 0) override {
@@ -434,6 +488,30 @@ class KVStoreDist : public KVStoreLocal {
         "KVStoreDistDefaultPush");
   }
 
+  void PushDefault(int key, const NDArray &send_buf, const PSKV& pskv, int priority) {
+    auto push_to_servers =
+        [this, key, pskv, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
+          const int dtype = send_buf.dtype();
+          // convert to ps keys
+          const size_t size = send_buf.shape().Size() * mshadow::mshadow_sizeof(dtype);
+          char* data = static_cast<char *>(send_buf.data().dptr_);
+          // do push. false means no delete
+          ps::SArray<char> vals(data, size, false);
+          int cmd = GetCommandType(RequestType::kDefaultPushPull, dtype);
+          CHECK_NOTNULL(ps_worker_)->ZPush(
+              pskv.keys, vals, pskv.lens,
+              cmd, [cb]() { cb(); });
+        };
+    Engine::Get()->PushAsync(
+        push_to_servers,
+        pinned_ctx_,
+        {send_buf.var()},
+        {},
+        FnProperty::kNormal,
+        priority,
+        "KVStoreDistDefaultPush");
+  }
+
   // push row sparse gradient
   void PushRowSparse(int key, const NDArray &send_buf, int priority) {
     using namespace rowsparse;
@@ -521,6 +599,57 @@ class KVStoreDist : public KVStoreLocal {
     auto last = std::unique(keys_copy.begin(), keys_copy.end());
     CHECK_EQ(static_cast<size_t>(std::distance(keys_copy.begin(), last)),
              static_cast<size_t>(keys.size()));
+  }
+
+  /**
+   * \brief convert to pskv for parameter server
+   * \param key
+   * \param num_arr_elems number of elements in the value for key
+   * \param num_bytes size of each element in number of bytes
+   * \return PSKV used for both push and pull
+   */
+  inline PSKV& EncodeDefaultKey(const int key, const size_t num_arr_elems,
+                                const int num_bytes) {
+    mu_.lock();
+    PSKV& pskv = ps_kv_[key];
+    mu_.unlock();
+    size_t pskv_size = num_arr_elems * num_bytes;
+    if (!pskv.keys.empty()) {
+      CHECK_EQ(static_cast<size_t>(pskv.size), pskv_size)
+        << "The value size cannot be changed " << pskv_size << ". Key is " << key;
+    } else {
+      auto krs = ps::Postoffice::Get()->GetServerKeyRanges();
+      const int num_servers = krs.size();
+      CHECK_GT(num_servers, 0);
+
+      // a simple heuristic for load balance
+      if (num_arr_elems < bigarray_bound_) {
+        // send it to a single random picked server
+        int server = (key * 9973) % num_servers;
+        ps::Key ps_key = krs[server].begin() + key;
+        CHECK_LT(ps_key, krs[server].end());
+        pskv.keys.push_back(ps_key);
+        const int total_bytes = num_arr_elems * num_bytes;
+        pskv.lens.push_back(total_bytes);
+        pskv.size = total_bytes;
+      } else {
+        // parition it to all servers
+        pskv.size = 0;
+        for (int i = 0; i < num_servers; ++i) {
+          size_t part_size =
+            static_cast<size_t>(round(static_cast<double>(num_arr_elems)/num_servers*(i+1))) -
+            static_cast<size_t>(round(static_cast<double>(num_arr_elems)/num_servers*i));
+          ps::Key ps_key = krs[i].begin() + key;
+          CHECK_LT(ps_key, krs[i].end());
+          pskv.keys.push_back(ps_key);
+          const int total_bytes = part_size * num_bytes;
+          pskv.lens.push_back(total_bytes);
+          pskv.size += total_bytes;
+        }
+      }
+      CHECK_EQ(static_cast<size_t>(pskv.size), pskv_size);
+    }
+    return pskv;
   }
 
   /**
