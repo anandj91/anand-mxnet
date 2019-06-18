@@ -217,6 +217,12 @@ class KVStoreDist : public KVStoreLocal {
   void PullImpl(const std::vector<int>& keys,
                 const std::vector<NDArray*>& values,
                 int priority, bool ignore_sparse) override {
+    PriorityPull(keys, values, priority, ignore_sparse);
+  }
+
+  void PriorityPull(const std::vector<int>& keys,
+                const std::vector<NDArray*>& values,
+                int priority, bool ignore_sparse) override {
     CHECK(ignore_sparse) << "dist kvstore pull doesn't support ignore_sparse=False";
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray*> > grouped_vals;
@@ -241,7 +247,7 @@ class KVStoreDist : public KVStoreLocal {
       const int dtype = recv_buf.dtype();
       const int num_bytes = mshadow::mshadow_sizeof(dtype);
       PSKV& pskv = (gradient_compression_->get_type() == CompressionType::kNone) ?
-                    EncodeDefaultKey(key, size, num_bytes) :
+                    EncodePriorityKey(key, size, num_bytes) :
                     EncodeCompressedKey(key, size, false, num_bytes);
       char* data = static_cast<char*> (recv_buf.data().dptr_);
       // false means not to delete data when SArray is deleted
@@ -283,7 +289,7 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void PullImpl(const std::vector<int>& keys,
+  void PullDefault(const std::vector<int>& keys,
                 const std::vector<NDArray*>& values,
                 int priority, bool ignore_sparse) override {
     CHECK(ignore_sparse) << "dist kvstore pull doesn't support ignore_sparse=False";
@@ -415,8 +421,8 @@ class KVStoreDist : public KVStoreLocal {
       // push to servers
       if (storage_type == kDefaultStorage) {
         if (gradient_compression_->get_type() == CompressionType::kNone) {
-          PSKV& pskv = EncodeDefaultKey(key, comm_buf.shape().Size(), num_bytes);
-          PushDefault(key, comm_buf, pskv, priority);
+          PSKV& pskv = EncodePriorityKey(key, comm_buf.shape().Size(), num_bytes);
+          PriorityPush(key, comm_buf, pskv, priority);
         } else {
           CHECK_EQ(dtype, mshadow::kFloat32) << "Gradient compression is only supported for "
                                              << "float32 type of parameters";
@@ -479,7 +485,7 @@ class KVStoreDist : public KVStoreLocal {
       "KVStoreDistCompressedPush");
   }
 
-  void PushDefault(int key, const NDArray &send_buf, const PSKV& pskv, int priority) {
+  void PriorityPush(int key, const NDArray &send_buf, const PSKV& pskv, int priority) {
     size_t off = 0;
     for (size_t idx = 0; idx < pskv.keys.size(); idx++) {
       auto slice_var = slice_vars[pskv.keys[idx]];
@@ -631,13 +637,13 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   /**
-   * \brief convert to pskv for parameter server
+   * \brief convert to pskv for priority-based parameter server
    * \param key
    * \param num_arr_elems number of elements in the value for key
    * \param num_bytes size of each element in number of bytes
    * \return PSKV used for both push and pull
    */
-  inline PSKV& EncodeDefaultKey(const int key, const size_t num_arr_elems,
+  inline PSKV& EncodePriorityKey(const int key, const size_t num_arr_elems,
                                 const int num_bytes) {
     mu_.lock();
     PSKV& pskv = ps_kv_[key];
