@@ -225,7 +225,7 @@ class KVStoreDist : public KVStoreLocal {
 
   void PriorityPull(const std::vector<int>& keys,
                 const std::vector<NDArray*>& values,
-                int priority, bool ignore_sparse) override {
+                int priority, bool ignore_sparse) {
     CHECK(ignore_sparse) << "dist kvstore pull doesn't support ignore_sparse=False";
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray*> > grouped_vals;
@@ -294,7 +294,7 @@ class KVStoreDist : public KVStoreLocal {
 
   void PullDefault(const std::vector<int>& keys,
                 const std::vector<NDArray*>& values,
-                int priority, bool ignore_sparse) override {
+                int priority, bool ignore_sparse) {
     CHECK(ignore_sparse) << "dist kvstore pull doesn't support ignore_sparse=False";
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray*> > grouped_vals;
