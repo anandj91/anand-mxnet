@@ -265,7 +265,7 @@ class KVStoreDist : public KVStoreLocal {
         const auto keys = pskv.keys.segment(idx, idx+1);
         auto lens = new ps::SArray<int>(pskv.lens.segment(idx, idx+1));
         auto vals = new ps::SArray<char>(arr.segment(off, off+pskv.lens[idx]));
-        auto slice_var = slice_vars[pskv.keys[idx]];
+        auto& slice_var = slice_vars[pskv.keys[idx]];
         if (!slice_var) {
           slice_var = Engine::Get()->NewVariable();
         }
@@ -491,7 +491,7 @@ class KVStoreDist : public KVStoreLocal {
   void PriorityPush(int key, const NDArray &send_buf, const PSKV& pskv, int priority) {
     size_t off = 0;
     for (size_t idx = 0; idx < pskv.keys.size(); idx++) {
-      auto slice_var = slice_vars[pskv.keys[idx]];
+      auto& slice_var = slice_vars[pskv.keys[idx]];
       if (!slice_var) {
         slice_var = Engine::Get()->NewVariable();
       }
@@ -665,7 +665,7 @@ class KVStoreDist : public KVStoreLocal {
        */
       int64_t params = pskv_size;
       int64_t slice_bound = bigarray_bound_ * num_bytes;
-      static ps::Key server = 0;
+      static size_t server = 0;
       while (params > 0) {
         ps::Key ps_key = krs[server%num_servers].begin()
                          + (ps::Key)(key + server/num_servers);
