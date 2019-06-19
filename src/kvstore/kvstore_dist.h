@@ -193,8 +193,9 @@ class KVStoreDist : public KVStoreLocal {
     for (size_t i = 0; i < keys.size(); ++i) {
       comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
       //TODO: Comment
-      EncodePriorityKey(keys[i], values[i].shape().Size(),
+      auto pskv = EncodePriorityKey(keys[i], values[i].shape().Size(),
               mshadow::mshadow_sizeof(values[i].dtype()));
+      LOG(WARNING)<<get_rank()<<"KEY: "<<keys[i]<<" "<<pskv.keys;
     }
     if (get_rank() == 0 && this->ps_worker_->get_customer()->customer_id() == 0) {
       Push_(keys, values, 0, false);
@@ -221,6 +222,7 @@ class KVStoreDist : public KVStoreLocal {
                 const std::vector<NDArray*>& values,
                 int priority, bool ignore_sparse) override {
     PriorityPull(keys, values, priority, ignore_sparse);
+    //PullDefault(keys, values, priority, ignore_sparse);
   }
 
   void PriorityPull(const std::vector<int>& keys,
@@ -270,10 +272,14 @@ class KVStoreDist : public KVStoreLocal {
           slice_var = Engine::Get()->NewVariable();
         }
 
-        auto pull_from_servers = [this, keys, vals, lens, cmd](
+        auto pull_from_servers = [this, key, keys, vals, lens, cmd](
             RunContext rctx, Engine::CallbackOnComplete cb) {
           CHECK_NOTNULL(ps_worker_)->ZPull(keys, vals, lens, cmd,
-            [vals, lens, cb](){ delete vals; delete lens; cb(); });
+            [this, vals, key, lens, cb](){
+	        ps::SArray<float> fvals((float*)vals->data(), vals->size()/sizeof(float), false);
+	    	LOG(WARNING)<<get_rank()<<" PULL "<<key<<" "<<fvals;
+	    	delete vals; delete lens; cb();
+	    });
         };
 
         CHECK_NOTNULL(Engine::Get())->PushAsync(
@@ -330,7 +336,11 @@ class KVStoreDist : public KVStoreLocal {
                   RequestType::kCompressedPushPull : RequestType::kDefaultPushPull;
         const int cmd = GetCommandType(mode, dtype);
         CHECK_NOTNULL(ps_worker_)->ZPull(
-          pskv.keys, vals, &pskv.lens, cmd, [vals, cb](){ delete vals; cb(); });
+          pskv.keys, vals, &pskv.lens, cmd, [this, key, vals, cb](){
+	        ps::SArray<float> fvals((float*)vals->data(), vals->size()/sizeof(float), false);
+	    	LOG(WARNING)<<get_rank()<<" PULL "<<key<<" "<<fvals;
+	  	delete vals; cb();
+	  });
       };
 
       CHECK_NOTNULL(Engine::Get())->PushAsync(
@@ -426,6 +436,8 @@ class KVStoreDist : public KVStoreLocal {
         if (gradient_compression_->get_type() == CompressionType::kNone) {
           PSKV& pskv = EncodePriorityKey(key, comm_buf.shape().Size(), num_bytes);
           PriorityPush(key, comm_buf, pskv, priority);
+          //PSKV& pskv = EncodeDefaultKey(key, comm_buf.shape().Size(), num_bytes);
+          //PushDefault(key, comm_buf, pskv, priority);
         } else {
           CHECK_EQ(dtype, mshadow::kFloat32) << "Gradient compression is only supported for "
                                              << "float32 type of parameters";
@@ -499,7 +511,7 @@ class KVStoreDist : public KVStoreLocal {
       auto keys = pskv.keys.segment(idx, idx+1);
       auto lens = pskv.lens.segment(idx, idx+1);
       auto push_to_servers =
-          [this, keys, lens, idx, off, pskv, send_buf, priority](RunContext rctx,
+          [this, key, keys, lens, idx, off, pskv, send_buf, priority](RunContext rctx,
                   Engine::CallbackOnComplete cb) {
             const int dtype = send_buf.dtype();
             /* convert to ps keys */
@@ -510,6 +522,8 @@ class KVStoreDist : public KVStoreLocal {
             auto vals = arr.segment(off, off + pskv.lens[idx]);
             int cmd = GetCommandType(RequestType::kDefaultPushPull, dtype);
 
+	    ps::SArray<float> fvals((float*)vals.data(), vals.size()/sizeof(float), false);
+	    LOG(WARNING)<<get_rank()<<" PUSH "<<key<<" "<<fvals;
             CHECK_NOTNULL(ps_worker_)->ZPush(keys, vals, lens, cmd,
                 [cb]() { cb(); }, priority);
           };
@@ -536,6 +550,8 @@ class KVStoreDist : public KVStoreLocal {
           // do push. false means no delete
           ps::SArray<char> vals(data, size, false);
           int cmd = GetCommandType(RequestType::kDefaultPushPull, dtype);
+	  ps::SArray<float> fvals((float*)vals.data(), vals.size()/sizeof(float), false);
+	  LOG(WARNING)<<get_rank()<<" PUSH "<<key<<" "<<fvals;
           CHECK_NOTNULL(ps_worker_)->ZPush(
               pskv.keys, vals, pskv.lens,
               cmd, [cb]() { cb(); });
