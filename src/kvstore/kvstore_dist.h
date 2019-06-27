@@ -55,8 +55,9 @@ class KVStoreDist : public KVStoreLocal {
           ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
       }
     }
-    bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 40 * 1000);
+    bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 1000 * 1000);
     slice_threshold_ = dmlc::GetEnv("MXNET_KVSTORE_SLICE_THRESHOLD", 40 * 1000);
+    priority_update_ = dmlc::GetEnv("MXNET_KVSTORE_DIST_PRIORITY_UPDATE", false);
     log_verbose_ = dmlc::GetEnv("MXNET_KVSTORE_DIST_ROW_SPARSE_VERBOSE", false);
   }
 
@@ -193,12 +194,12 @@ class KVStoreDist : public KVStoreLocal {
     CheckUnique(keys);
     for (size_t i = 0; i < keys.size(); ++i) {
       comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
-#ifdef MXNET_USE_PRIORITY_UPDATE
-      // Initialize the slices as this is the only function that is assured to
-      // be called in the same order in all the worker machines
-      EncodeDefaultKey(keys[i], values[i].shape().Size(),
-              mshadow::mshadow_sizeof(values[i].dtype()));
-#endif
+      if (priority_update_) {
+        // Initialize the slices as this is the only function that is assured to
+        // be called in the same order in all the worker machines
+        EncodeDefaultKey(keys[i], values[i].shape().Size(),
+                mshadow::mshadow_sizeof(values[i].dtype()));
+      }
     }
     if (get_rank() == 0 && this->ps_worker_->get_customer()->customer_id() == 0) {
       Push_(keys, values, 0, false);
@@ -243,11 +244,11 @@ class KVStoreDist : public KVStoreLocal {
                            true, grouped_vals[i][0]->dtype());
       }
 
-#ifdef MXNET_USE_PRIORITY_UPDATE
-      PriorityPull(key, recv_buf, priority);
-#else
-      PullDefault(key, recv_buf, priority);
-#endif
+      if (priority_update_) {
+        PriorityPull(key, recv_buf, priority);
+      } else {
+        PullDefault(key, recv_buf, priority);
+      }
       comm_->Broadcast(key, recv_buf, grouped_vals[i], priority);
     }
   }
@@ -410,11 +411,11 @@ class KVStoreDist : public KVStoreLocal {
       if (storage_type == kDefaultStorage) {
         if (gradient_compression_->get_type() == CompressionType::kNone) {
           PSKV& pskv = EncodeDefaultKey(key, comm_buf.shape().Size(), num_bytes);
-#ifdef MXNET_USE_PRIORITY_UPDATE
-          PriorityPush(key, comm_buf, pskv, priority);
-#else
-          PushDefault(key, comm_buf, pskv, priority);
-#endif
+          if (priority_update_) {
+            PriorityPush(key, comm_buf, pskv, priority);
+          } else {
+            PushDefault(key, comm_buf, pskv, priority);
+          }
         } else {
           CHECK_EQ(dtype, mshadow::kFloat32) << "Gradient compression is only supported for "
                                              << "float32 type of parameters";
@@ -645,11 +646,11 @@ class KVStoreDist : public KVStoreLocal {
       CHECK_EQ(static_cast<size_t>(pskv.size), pskv_size)
         << "The value size cannot be changed " << pskv_size << ". Key is " << key;
     } else {
-#ifdef MXNET_USE_PRIORITY_UPDATE
-      RRKeyDist(&pskv, key, num_arr_elems, num_bytes);
-#else
-      DefaultKeyDist(&pskv, key, num_arr_elems, num_bytes);
-#endif
+      if (priority_update_) {
+        RRKeyDist(&pskv, key, num_arr_elems, num_bytes);
+      } else {
+        DefaultKeyDist(&pskv, key, num_arr_elems, num_bytes);
+      }
       CHECK_EQ(static_cast<size_t>(pskv.size), pskv_size);
     }
     return pskv;
@@ -916,6 +917,7 @@ class KVStoreDist : public KVStoreLocal {
    */
   std::unordered_map<int, engine::VarHandle> slice_vars;
   bool log_verbose_;
+  bool priority_update_;
 };
 
 }  // namespace kvstore

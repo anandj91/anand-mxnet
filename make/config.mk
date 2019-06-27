@@ -167,9 +167,6 @@ USE_F16C =
 # whether or not to enable multi-machine supporting
 USE_DIST_KVSTORE = 0
 
-# whether or not to use priority-based update with parameter server
-USE_PRIORITY_UPDATE = 0
-
 # whether or not allow to read and write HDFS directly. If yes, then hadoop is
 # required
 USE_HDFS = 0
