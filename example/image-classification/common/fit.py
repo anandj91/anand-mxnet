@@ -308,8 +308,19 @@ def fit(args, network, data_loader, **kwargs):
         else:
             logging.warning("The output is not softmax_output, loss argument will be skipped!")
 
+    filename = '/home/anandj/anandj/profiler-' + str(kv.rank) + '.json'
+    mx.profiler.set_config(filename=filename, profile_all=True, profile_process='worker')
+    def callback():
+        def switch_profiler(param):
+            if param.epoch == 0 and param.nbatch == 30:
+                mx.profiler.set_state(state='run', profile_process='worker')
+            if param.epoch == 0 and param.nbatch == 40:
+                mx.profiler.set_state(state='stop', profile_process='worker')
+                mx.profiler.dump(finished=True, profile_process='worker')
+        return switch_profiler
+
     # callbacks that run after each batch
-    batch_end_callbacks = [mx.callback.Speedometer(
+    batch_end_callbacks = [callback(), mx.callback.Speedometer(
         args.batch_size, args.disp_batches)]
     if 'batch_end_callback' in kwargs:
         cbs = kwargs['batch_end_callback']
