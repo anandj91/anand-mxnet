@@ -67,18 +67,18 @@ ADD_CFLAGS =
 #---------------------------------------------
 
 # whether use CUDA during compile
-USE_CUDA = 0
+USE_CUDA = 1
 
 # add the path to CUDA library to link and compile flag
 # if you have already add them to environment variable, leave it as NONE
-# USE_CUDA_PATH = /usr/local/cuda
-USE_CUDA_PATH = NONE
+USE_CUDA_PATH = /home/anandj/anandj/cuda-10.0/
+#USE_CUDA_PATH = NONE
 
 # whether to enable CUDA runtime compilation
 ENABLE_CUDA_RTC = 1
 
 # whether use CuDNN R3 library
-USE_CUDNN = 0
+USE_CUDNN = 1
 
 # whether to use NVTX when profiling
 USE_NVTX = 0
@@ -108,7 +108,7 @@ USE_OPENMP = 1
 # whether use MKL-DNN library: 0 = disabled, 1 = enabled
 # if USE_MKLDNN is not defined, MKL-DNN will be enabled by default on x86 Linux.
 # you can disable it explicity with USE_MKLDNN = 0
-USE_MKLDNN =
+USE_MKLDNN = 0
 
 # whether use NNPACK library
 USE_NNPACK = 0
@@ -116,12 +116,7 @@ USE_NNPACK = 0
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
 # in default use atlas for linux while apple for osx
-UNAME_S := $(shell uname -s)
-ifeq ($(UNAME_S), Darwin)
-USE_BLAS = apple
-else
-USE_BLAS = atlas
-endif
+USE_BLAS = openblas
 
 # whether use lapack during compilation
 # only effective when compiled with blas versions openblas/apple/atlas/mkl
@@ -165,7 +160,7 @@ USE_F16C =
 #----------------------------
 
 # whether or not to enable multi-machine supporting
-USE_DIST_KVSTORE = 0
+USE_DIST_KVSTORE = 1
 
 # whether or not allow to read and write HDFS directly. If yes, then hadoop is
 # required
