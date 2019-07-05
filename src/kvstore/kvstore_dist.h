@@ -666,7 +666,7 @@ class KVStoreDist : public KVStoreLocal {
     CHECK_GT(num_servers, 0);
 
     int64_t num_params = num_arr_elems * num_bytes;
-    int64_t slice_bound = bigarray_bound_ * num_bytes;
+    int64_t slice_bound = slice_threshold_ * num_bytes;
     static size_t server = 0;
     while (num_params > 0) {
       ps::Key ps_key = krs[server%num_servers].begin()
