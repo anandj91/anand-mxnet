@@ -104,8 +104,22 @@ class KVStore(KVStoreBase):
         [ 2.  2.  2.]]
 
         """
-        self.init(key, value)
-        self.pull(key, out=out, priority=priority)
+        cvkeys, cvals, use_str_keys = _ctype_key_value(key, value)
+        if out is not None:
+            cokeys, couts, _ = _ctype_key_value(key, out)
+        else:
+            cokeys = cvkeys
+            couts = cvals
+
+        if use_str_keys:
+            check_call(_LIB.MXKVStoreBroadcastEx(
+                self.handle, mx_uint(len(cvkeys)), cvkeys, mx_uint(len(cokeys)), cokeys,
+                cvals, couts, ctypes.c_int(priority)))
+        else:
+            check_call(_LIB.MXKVStoreBroadcast(
+                self.handle, mx_uint(len(cvkeys)), cvkeys, mx_uint(len(cokeys)), cokeys,
+                cvals, couts, ctypes.c_int(priority)))
+
 
     @staticmethod
     def is_capable(capability):

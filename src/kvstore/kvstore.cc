@@ -29,6 +29,7 @@
 
 #if MXNET_USE_DIST_KVSTORE
 #include "./kvstore_dist.h"
+#include "./p3store.h"
 std::atomic<int> mxnet::kvstore::KVStoreDist::customer_id_{0};
 #endif  // MXNET_USE_DIST_KVSTORE
 #if MXNET_USE_NCCL
@@ -51,7 +52,12 @@ KVStore* KVStore::Create(const char *type_name) {
 
   if (has("dist")) {
 #if MXNET_USE_DIST_KVSTORE
-    kv = new kvstore::KVStoreDist(use_device_comm);
+    if (has("prio")) {
+      CHECK(!has("async")) << "Asynchronous update is not supported in P3Store";
+      kv = new kvstore::P3Store(use_device_comm);
+    } else {
+      kv = new kvstore::KVStoreDist(use_device_comm);
+    }
     if (!has("_async") && kv->IsWorkerNode() && kv->get_rank() == 0) {
       // configure the server to be the sync mode
       kv->SendCommandToServers(static_cast<int>(kvstore::CommandType::kSyncMode), "");
