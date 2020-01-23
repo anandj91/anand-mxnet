@@ -57,13 +57,13 @@ class P3StoreDist : public KVStoreDist {
   void PullRowSparse(const std::vector<int>& str_keys,
                      const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
                      int priority) final {
-    LOG(FATAL) << "NotImplementedError: PullRowSparse not supported in P3StoreDist. Call Pull instead.";
+    LOG(FATAL) << "NotImplementedError: PullRowSparse not supported in P3StoreDist.";
   }
 
   void PullRowSparse(const std::vector<std::string>& str_keys,
                      const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
                      int priority) final {
-    LOG(FATAL) << "NotImplementedError: PullRowSparse not supported in P3StoreDist. Call Pull instead.";
+    LOG(FATAL) << "NotImplementedError: PullRowSparse not supported in P3StoreDist.";
   }
 
   void set_updater(const Updater& updater) final {
