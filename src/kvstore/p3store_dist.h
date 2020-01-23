@@ -19,11 +19,11 @@
 
 /**
  * Copyright (c) 2015 by Contributors
- * @file   p3store.h
+ * @file   p3store_dist.h
  * @brief  priority-based kvstore implementation
  */
-#ifndef MXNET_KVSTORE_P3STORE_H_
-#define MXNET_KVSTORE_P3STORE_H_
+#ifndef MXNET_KVSTORE_P3STORE_DIST_H_
+#define MXNET_KVSTORE_P3STORE_DIST_H_
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -37,49 +37,49 @@ namespace kvstore {
 /**
  * \brief distributed p3store
  */
-class P3Store : public KVStoreDist {
+class P3StoreDist : public KVStoreDist {
  public:
-  explicit P3Store(bool use_device_comm)
+  explicit P3StoreDist(bool use_device_comm)
       : KVStoreDist(use_device_comm) {
     slice_threshold_ = dmlc::GetEnv("MXNET_KVSTORE_SLICE_THRESHOLD", 40 * 1000);
   }
 
   void Init(const std::vector<int>& keys,
             const std::vector<NDArray>& values) final {
-    LOG(FATAL) << "NotImplementedError: Init not supported in P3Store. Call Broadcast instead.";
+    LOG(FATAL) << "NotImplementedError: Init not supported in P3StoreDist. Call Broadcast instead.";
   }
 
   void Init(const std::vector<std::string>& str_keys,
             const std::vector<NDArray>& values) final {
-    LOG(FATAL) << "NotImplementedError: Init not supported in P3Store. Call Broadcast instead.";
+    LOG(FATAL) << "NotImplementedError: Init not supported in P3StoreDist. Call Broadcast instead.";
   }
 
   void PullRowSparse(const std::vector<int>& str_keys,
                      const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
                      int priority) final {
-    LOG(FATAL) << "NotImplementedError: PullRowSparse not supported in P3Store. Call Pull instead.";
+    LOG(FATAL) << "NotImplementedError: PullRowSparse not supported in P3StoreDist. Call Pull instead.";
   }
 
   void PullRowSparse(const std::vector<std::string>& str_keys,
                      const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
                      int priority) final {
-    LOG(FATAL) << "NotImplementedError: PullRowSparse not supported in P3Store. Call Pull instead.";
+    LOG(FATAL) << "NotImplementedError: PullRowSparse not supported in P3StoreDist. Call Pull instead.";
   }
 
   void set_updater(const Updater& updater) final {
-      LOG(FATAL) << "NotImplementedError: Update on P3Store is not supported. "
+      LOG(FATAL) << "NotImplementedError: Update on P3StoreDist is not supported. "
           << "Please set MXNET_UPDATE_ON_KVSTORE to false.";
   }
 
   void SetGradientCompression(const std::vector<std::pair<std::string, std::string>>
                               & kwargs) final {
-    LOG(FATAL) << "NotImplementedError: Gradient compression not supported in P3Store.";
+    LOG(FATAL) << "NotImplementedError: Gradient compression not supported in P3StoreDist.";
   }
 
  private:
   void PushCompressed(int key, const NDArray& comm_buf, const PSKV& pskv,
                       int priority) final {
-    LOG(FATAL) << "NotImplementedError: PushCompressed not implemented in P3Store.";
+    LOG(FATAL) << "NotImplementedError: PushCompressed not implemented in P3StoreDist.";
   }
 
   void PushDefault(int key, const NDArray &send_buf, const PSKV& pskv,
@@ -122,12 +122,12 @@ class P3Store : public KVStoreDist {
   }
 
   void PushRowSparse(int key, const NDArray &send_buf, int priority) override {
-    LOG(FATAL) << "NotImplementedError: PushRowSparse not implemented in P3Store.";
+    LOG(FATAL) << "NotImplementedError: PushRowSparse not implemented in P3StoreDist.";
   }
 
   void PullDefault(int key, const NDArray &recv_buf, int priority) override {
     CHECK(gradient_compression_->get_type() == CompressionType::kNone)
-       << "Gradient compression not supported in P3Store.";
+       << "Gradient compression not supported in P3StoreDist.";
     auto pull_from_servers = [this, key, recv_buf, priority](
         RunContext rctx, Engine::CallbackOnComplete cb) {
       // convert to ps keys
@@ -168,12 +168,12 @@ class P3Store : public KVStoreDist {
 
   void PullRowSparse_(const int key, const NDArray& recv_buf,
                       const NDArray& indices, int priority) override {
-    LOG(FATAL) << "NotImplementedError: PullRowSparse not implemented in P3Store.";
+    LOG(FATAL) << "NotImplementedError: PullRowSparse not implemented in P3StoreDist.";
   }
 
   void PushPullDefault(int key, const NDArray &comm_buf, int priority) override {
     CHECK(gradient_compression_->get_type() == CompressionType::kNone)
-             << "Compression not supported in P3Store";
+             << "Compression not supported in P3StoreDist";
     auto pushpull = [this, key, comm_buf, priority](
         RunContext rctx, Engine::CallbackOnComplete cb) {
       size_t size = comm_buf.shape().Size();
@@ -249,14 +249,14 @@ class P3Store : public KVStoreDist {
 
   inline PSKV& EncodeCompressedKey(const int key, const size_t original_num_elem,
                                    const bool is_push, const int num_bytes) override {
-    LOG(FATAL) << "NotImplementedError: EncodeCompressedKey not implemented in P3Store.";
+    LOG(FATAL) << "NotImplementedError: EncodeCompressedKey not implemented in P3StoreDist.";
   }
 
   inline PSKV& EncodeRowSparseKey(const int key, const int64_t num_elem,
           const int64_t num_rows, const int64_t *offsets,
           const size_t unit_len, const int64_t total_num_rows,
           const int num_bytes) override {
-    LOG(FATAL) << "NotImplementedError: EncodeRowSparseKey not implemented in P3Store.";
+    LOG(FATAL) << "NotImplementedError: EncodeRowSparseKey not implemented in P3StoreDist.";
   }
 
   /**
@@ -269,4 +269,4 @@ class P3Store : public KVStoreDist {
 }  // namespace mxnet
 
 
-#endif  // MXNET_KVSTORE_KVSTORE_DIST_H_
+#endif  // MXNET_KVSTORE_P3STORE_DIST_H_
