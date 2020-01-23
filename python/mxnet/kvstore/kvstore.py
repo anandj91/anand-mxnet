@@ -105,11 +105,9 @@ class KVStore(KVStoreBase):
 
         """
         cvkeys, cvals, use_str_keys = _ctype_key_value(key, value)
-        if out is not None:
-            cokeys, couts, _ = _ctype_key_value(key, out)
-        else:
-            cokeys = cvkeys
-            couts = cvals
+        cokeys, couts, use_str_keys2 = _ctype_key_value(key, out)
+        
+        assert (use_str_keys == use_str_keys2)
 
         if use_str_keys:
             check_call(_LIB.MXKVStoreBroadcastEx(
