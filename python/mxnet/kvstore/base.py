@@ -431,9 +431,16 @@ def create(name='local'):
     No two updates happen on the same weight at the same time. However, the order is not
     guaranteed.
 
+    ``dist_p3``: Optimized version of ``dist_sync`` with parameter synchronization
+    is scheduled based on thier priority.
+
+    ``dist_device_p3``: Identical to ``dist_p3`` with the difference similar
+    to ``device`` vs ``local``.
+
     Parameters
     ----------
-    name : {'local', 'device', 'nccl', 'dist_sync', 'dist_device_sync', 'dist_async', 'horovod'}
+    name : {'local', 'device', 'nccl', 'dist_sync', 'dist_device_sync', 'dist_async',
+            'horovod', 'dist_p3', dist_device_p3'}
         The type of KVStore.
     Returns
     -------
