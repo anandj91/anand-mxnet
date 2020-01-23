@@ -46,39 +46,40 @@ class P3Store : public KVStoreDist {
 
   void Init(const std::vector<int>& keys,
             const std::vector<NDArray>& values) final {
-    LOG(FATAL) << "Init not supported in P3Store. Call Broadcast instead.";
+    LOG(FATAL) << "NotImplementedError: Init not supported in P3Store. Call Broadcast instead.";
   }
 
   void Init(const std::vector<std::string>& str_keys,
             const std::vector<NDArray>& values) final {
-    LOG(FATAL) << "Init not supported in P3Store. Call Broadcast instead.";
+    LOG(FATAL) << "NotImplementedError: Init not supported in P3Store. Call Broadcast instead.";
   }
 
   void PullRowSparse(const std::vector<int>& str_keys,
                      const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
                      int priority) final {
-    LOG(FATAL) << "PullRowSparse not supported in P3Store. Call Pull instead.";
+    LOG(FATAL) << "NotImplementedError: PullRowSparse not supported in P3Store. Call Pull instead.";
   }
 
   void PullRowSparse(const std::vector<std::string>& str_keys,
                      const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
                      int priority) final {
-    LOG(FATAL) << "PullRowSparse not supported in P3Store. Call Pull instead.";
+    LOG(FATAL) << "NotImplementedError: PullRowSparse not supported in P3Store. Call Pull instead.";
   }
 
   void set_updater(const Updater& updater) final {
-      LOG(FATAL) << "Update on P3Store is not supported. Please set MXNET_UPDATE_ON_KVSTORE to false.";
+      LOG(FATAL) << "NotImplementedError: Update on P3Store is not supported. "
+          << "Please set MXNET_UPDATE_ON_KVSTORE to false.";
   }
 
   void SetGradientCompression(const std::vector<std::pair<std::string, std::string>>
                               & kwargs) final {
-    LOG(FATAL) << "Gradient compression not supported in P3Store.";
+    LOG(FATAL) << "NotImplementedError: Gradient compression not supported in P3Store.";
   }
 
  private:
   void PushCompressed(int key, const NDArray& comm_buf, const PSKV& pskv,
                       int priority) final {
-    LOG(FATAL) << "PushCompressed not implemented in P3Store.";
+    LOG(FATAL) << "NotImplementedError: PushCompressed not implemented in P3Store.";
   }
 
   void PushDefault(int key, const NDArray &send_buf, const PSKV& pskv,
@@ -121,7 +122,7 @@ class P3Store : public KVStoreDist {
   }
 
   void PushRowSparse(int key, const NDArray &send_buf, int priority) override {
-    LOG(FATAL) << "PushRowSparse not implemented in P3Store.";
+    LOG(FATAL) << "NotImplementedError: PushRowSparse not implemented in P3Store.";
   }
 
   void PullDefault(int key, const NDArray &recv_buf, int priority) override {
@@ -167,7 +168,7 @@ class P3Store : public KVStoreDist {
 
   void PullRowSparse_(const int key, const NDArray& recv_buf,
                       const NDArray& indices, int priority) override {
-    LOG(FATAL) << "PullRowSparse not implemented in P3Store.";
+    LOG(FATAL) << "NotImplementedError: PullRowSparse not implemented in P3Store.";
   }
 
   void PushPullDefault(int key, const NDArray &comm_buf, int priority) override {
@@ -248,14 +249,14 @@ class P3Store : public KVStoreDist {
 
   inline PSKV& EncodeCompressedKey(const int key, const size_t original_num_elem,
                                    const bool is_push, const int num_bytes) override {
-    LOG(FATAL) << "EncodeCompressedKey not implemented in P3Store.";
+    LOG(FATAL) << "NotImplementedError: EncodeCompressedKey not implemented in P3Store.";
   }
 
   inline PSKV& EncodeRowSparseKey(const int key, const int64_t num_elem,
           const int64_t num_rows, const int64_t *offsets,
           const size_t unit_len, const int64_t total_num_rows,
           const int num_bytes) override {
-    LOG(FATAL) << "EncodeRowSparseKey not implemented in P3Store.";
+    LOG(FATAL) << "NotImplementedError: EncodeRowSparseKey not implemented in P3Store.";
   }
 
   /**
