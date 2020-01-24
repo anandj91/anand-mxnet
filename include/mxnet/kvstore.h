@@ -200,56 +200,48 @@ class KVStore {
 
   /*!
    * \brief broadcast a list of key-value pairs from the store
-   * \param vkeys the list of keys to be pushed
-   * \param okeys the list of keys to be pulled. Should be the same set of keys in vkeys.
+   * \param keys the list of keys to be pushed
    * \param values the list of values to be pushed
    * \param outs the list of buffers for the pulled data, they should be preallocated
    * \param priority Priority of the action.
    */
-  virtual void Broadcast(const std::vector<int>& vkeys,
-                         const std::vector<int>& okeys,
+  virtual void Broadcast(const std::vector<int>& keys,
                          const std::vector<NDArray>& values,
                          const std::vector<NDArray*>& outs,
                          int priority = 0) = 0;
 
   /*!
    * \brief broadcast a list of key-value pairs from the store
-   * \param vkeys the list of keys to be pushed in string format
-   * \param okeys the list of keys to be pulled in string format. Should be the same set of keys in vkeys.
+   * \param keys the list of keys to be pushed in string format
    * \param values the list of values to be pushed
    * \param outs the list of buffers for the pulled data, they should be preallocated
    * \param priority Priority of the action.
    */
-  virtual void Broadcast(const std::vector<std::string>& str_vkeys,
-                         const std::vector<std::string>& str_okeys,
+  virtual void Broadcast(const std::vector<std::string>& str_keys,
                          const std::vector<NDArray>& values,
                          const std::vector<NDArray*>& outs,
                          int priority = 0) = 0;
 
   /*!
    * \brief push and pull a list of key-value pairs from the store
-   * \param vkeys the list of keys to be pushed
-   * \param okeys the list of keys to be pulled. Should be the same set of keys in vkeys.
+   * \param keys the list of keys to be pushed
    * \param values the list of values to be pushed
    * \param outs the list of buffers for the pulled data, they should be preallocated
    * \param priority Priority of the action.
    */
-  virtual void PushPull(const std::vector<int>& vkeys,
-                        const std::vector<int>& okeys,
+  virtual void PushPull(const std::vector<int>& keys,
                         const std::vector<NDArray>& values,
                         const std::vector<NDArray*>& outs,
                         int priority = 0) = 0;
 
   /*!
    * \brief push and pull a list of key-value pairs from the store
-   * \param vkeys the list of keys to be pushed in string format
-   * \param okeys the list of keys to be pulled in string format. Should be the same set of keys in vkeys.
+   * \param keys the list of keys to be pushed in string format
    * \param values the list of values to be pushed
    * \param outs the list of buffers for the pulled data, they should be preallocated
    * \param priority Priority of the action.
    */
-  virtual void PushPull(const std::vector<std::string>& str_vkeys,
-                        const std::vector<std::string>& str_okeys,
+  virtual void PushPull(const std::vector<std::string>& str_keys,
                         const std::vector<NDArray>& values,
                         const std::vector<NDArray*>& outs,
                         int priority = 0) = 0;

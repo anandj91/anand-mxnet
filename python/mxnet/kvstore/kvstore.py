@@ -104,19 +104,17 @@ class KVStore(KVStoreBase):
         [ 2.  2.  2.]]
 
         """
-        cvkeys, cvals, use_str_keys = _ctype_key_value(key, value)
-        cokeys, couts, use_str_keys2 = _ctype_key_value(key, out)
+        ckeys, cvals, use_str_keys = _ctype_key_value(key, value)
+        _, couts, use_str_keys2 = _ctype_key_value(key, out)
         
         assert (use_str_keys == use_str_keys2)
 
         if use_str_keys:
             check_call(_LIB.MXKVStoreBroadcastEx(
-                self.handle, mx_uint(len(cvkeys)), cvkeys, mx_uint(len(cokeys)), cokeys,
-                cvals, couts, ctypes.c_int(priority)))
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals, couts, ctypes.c_int(priority)))
         else:
             check_call(_LIB.MXKVStoreBroadcast(
-                self.handle, mx_uint(len(cvkeys)), cvkeys, mx_uint(len(cokeys)), cokeys,
-                cvals, couts, ctypes.c_int(priority)))
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals, couts, ctypes.c_int(priority)))
 
 
     @staticmethod
@@ -400,21 +398,19 @@ class KVStore(KVStoreBase):
         [ 4.  4.  4.]]
 
         """
-        cvkeys, cvals, use_str_keys = _ctype_key_value(key, value)
+        ckeys, cvals, use_str_keys = _ctype_key_value(key, value)
         if out is not None:
-            cokeys, couts, _ = _ctype_key_value(key, out)
+            _, couts, use_str_keys2 = _ctype_key_value(key, out)
+            assert use_str_keys == use_str_keys2
         else:
-            cokeys = cvkeys
             couts = cvals
 
         if use_str_keys:
             check_call(_LIB.MXKVStorePushPullEx(
-                self.handle, mx_uint(len(cvkeys)), cvkeys, mx_uint(len(cokeys)), cokeys,
-                cvals, couts, ctypes.c_int(priority)))
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals, couts, ctypes.c_int(priority)))
         else:
             check_call(_LIB.MXKVStorePushPull(
-                self.handle, mx_uint(len(cvkeys)), cvkeys, mx_uint(len(cokeys)), cokeys,
-                cvals, couts, ctypes.c_int(priority)))
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals, couts, ctypes.c_int(priority)))
 
     def row_sparse_pull(self, key, out=None, priority=0, row_ids=None):
         """ Pulls a single RowSparseNDArray value or a sequence of RowSparseNDArray values \

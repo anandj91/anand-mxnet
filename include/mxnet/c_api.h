@@ -2759,20 +2759,16 @@ MXNET_DLL int MXKVStoreBroadcastEx(KVStoreHandle handle,
 /*!
  * \brief push and pull a list of (key, value) pairs from the kvstore
  * \param handle handle to the kvstore
- * \param vnum the number of key-value pairs corresponding to vkeys
- * \param vkeys the list of keys for the values to be pushed
- * \param onum the number of key-value pairs corresponding to okeys
- * \param okeys the list of keys for the values to be pulled
+ * \param num the number of key-value pairs corresponding to vkeys
+ * \param keys the list of keys for the values to be pushed
  * \param vals the list of values
  * \param outs the list of outputs
  * \param priority the priority of the action
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStorePushPull(KVStoreHandle handle,
-                                mx_uint vnum,
-                                const int* vkeys,
-                                mx_uint onum,
-                                const int* okeys,
+                                mx_uint num,
+                                const int* keys,
                                 NDArrayHandle* vals,
                                 NDArrayHandle* outs,
                                 int priority);
@@ -2780,20 +2776,16 @@ MXNET_DLL int MXKVStorePushPull(KVStoreHandle handle,
  * \brief push and pull a list of (key, value) pairs from the kvstore,
  * where each key is a string
  * \param handle handle to the kvstore
- * \param vnum the number of key-value pairs corresponding to vkeys
- * \param vkeys the list of keys for the values to be pushed
- * \param onum the number of key-value pairs corresponding to okeys
- * \param okeys the list of keys for the values to be pulled
+ * \param num the number of key-value pairs corresponding to vkeys
+ * \param keys the list of keys for the values to be pushed
  * \param vals the list of values
  * \param outs the list of outputs
  * \param priority the priority of the action
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStorePushPullEx(KVStoreHandle handle,
-                                  mx_uint vnum,
-                                  const char** vkeys,
-                                  mx_uint onum,
-                                  const char** okeys,
+                                  mx_uint num,
+                                  const char** keys,
                                   NDArrayHandle* vals,
                                   NDArrayHandle* outs,
                                   int priority);
