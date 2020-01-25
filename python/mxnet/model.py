@@ -123,6 +123,8 @@ def _create_kvstore(kvstore, num_device, arg_params):
 
     if kv is None:
         update_on_kvstore = False
+    else:
+        update_on_kvstore &= kv.is_capable(kvs.KVStoreBase.OPTIMIZER)
 
     return (kv, update_on_kvstore)
 

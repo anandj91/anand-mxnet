@@ -52,7 +52,7 @@ KVStore* KVStore::Create(const char *type_name) {
 
   if (has("dist")) {
 #if MXNET_USE_DIST_KVSTORE
-    if (has("p3")) {
+    if (dmlc::GetEnv("DMLC_PS_VAN_TYPE", "") == "p3") {
       CHECK(!has("async")) << "Asynchronous update is not supported in P3StoreDist";
       kv = new kvstore::P3StoreDist(use_device_comm);
     } else {

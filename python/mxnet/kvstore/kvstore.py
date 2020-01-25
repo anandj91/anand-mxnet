@@ -21,6 +21,7 @@ from __future__ import absolute_import
 
 import pickle
 import ctypes
+import os
 from ..ndarray import NDArray
 from ..ndarray import _ndarray_cls
 from ..base import _LIB, c_str
@@ -67,6 +68,7 @@ class KVStore(KVStoreBase):
         self._updater = None
         self._updater_func = None
         self._str_updater_func = None
+        self._is_p3 = (os.getenv('DMLC_PS_VAN_TYPE', '') == 'p3')
 
     def __del__(self):
         check_call(_LIB.MXKVStoreFree(self.handle))
@@ -133,7 +135,7 @@ class KVStore(KVStoreBase):
             Whether the capability is supported or not.
         """
         if capability.lower() == KVStoreBase.OPTIMIZER:
-            return True
+            return not self._is_p3
         else:
             raise ValueError('Unknown capability: {}'.format(capability))
 
