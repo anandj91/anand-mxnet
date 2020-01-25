@@ -21,14 +21,12 @@ from __future__ import absolute_import
 
 from array import array
 import ctypes
-import sys
 import warnings
 from ..ndarray import NDArray
 from ..base import _LIB, c_str_array, c_handle_array, c_array, c_array_buf, c_str
 from ..base import check_call, string_types
 from ..base import KVStoreHandle
 from ..profiler import set_kvstore_handle
-from .kvstore_server import KVStoreServer
 
 __all__ = ['create', 'KVStoreBase']
 
@@ -444,11 +442,9 @@ def create(name='local'):
         raise TypeError('name must be a string')
     name = name.lower()
 
-    kv = None
-
     # first lookup the registry
     if name in KVStoreBase.kv_registry:
-        kv = KVStoreBase.kv_registry[name]()
+        return KVStoreBase.kv_registry[name]()
     else:
         # fall back to the native kvstore implementation
         handle = KVStoreHandle()
@@ -457,13 +453,4 @@ def create(name='local'):
         from .kvstore import KVStore
         kv = KVStore(handle)
         set_kvstore_handle(kv.handle)
-
-    is_worker = ctypes.c_int()
-    check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
-    if is_worker.value == 0:
-        """Start server/scheduler."""
-        server = KVStoreServer(kv)
-        server.run()
-        sys.exit()
-
-    return kv
+        return kv
