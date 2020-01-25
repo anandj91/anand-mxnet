@@ -247,18 +247,6 @@ class P3StoreDist : public KVStoreDist {
     return pskv;
   }
 
-  inline PSKV& EncodeCompressedKey(const int key, const size_t original_num_elem,
-                                   const bool is_push, const int num_bytes) override {
-    LOG(FATAL) << "NotImplementedError: EncodeCompressedKey not implemented in P3StoreDist.";
-  }
-
-  inline PSKV& EncodeRowSparseKey(const int key, const int64_t num_elem,
-          const int64_t num_rows, const int64_t *offsets,
-          const size_t unit_len, const int64_t total_num_rows,
-          const int num_bytes) override {
-    LOG(FATAL) << "NotImplementedError: EncodeRowSparseKey not implemented in P3StoreDist.";
-  }
-
   /**
    * \brief threshold for the parameter slice size
    */
