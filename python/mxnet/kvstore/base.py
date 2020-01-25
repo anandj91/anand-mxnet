@@ -142,8 +142,7 @@ class KVStoreBase(object):
 
     OPTIMIZER = 'optimizer'
 
-    @staticmethod
-    def is_capable(capability):
+    def is_capable(self, capability):
         """Queries if the KVStore type supports certain capability, such as optimizer algorithm,
         gradient compression, sparsity, etc.
 

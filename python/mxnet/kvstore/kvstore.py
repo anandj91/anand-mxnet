@@ -119,8 +119,7 @@ class KVStore(KVStoreBase):
                 self.handle, mx_uint(len(ckeys)), ckeys, cvals, couts, ctypes.c_int(priority)))
 
 
-    @staticmethod
-    def is_capable(capability):
+    def is_capable(self, capability):
         """Queries if the KVStore type supports certain capability, such as optimizer algorithm,
         gradient compression, sparsity, etc.
 
