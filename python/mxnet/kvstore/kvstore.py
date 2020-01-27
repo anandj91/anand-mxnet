@@ -84,12 +84,11 @@ class KVStore(KVStoreBase):
         key : str, or int
             The key.
 
-        value : NDArray, list of NDArray
-            The value corresponding to the key to broadcast
+        value : NDArray, list of NDArray, or list of list of NDArray
+            Values corresponding to the keys.
 
-        out : NDArray, list of NDArray
-            Values corresponding to the key to store the result
-            `out` should have same length as `value`.
+        out: NDArray or list of NDArray or list of list of NDArray
+            Outputs corresponding to the keys.
 
         priority : int, optional
             The priority of the operation.
@@ -359,9 +358,8 @@ class KVStore(KVStoreBase):
         value : NDArray, list of NDArray, or list of list of NDArray
             Values corresponding to the keys.
 
-        out: NDArray or list of NDArray or list of list of NDArray
-            Values corresponding to the keys.
-            `out` should have length as `value`.
+        out: NDArray or list of NDArray or list of list of NDArray, optional
+            Outputs corresponding to the keys.
 
         priority : int, optional
             The priority of the operation.
