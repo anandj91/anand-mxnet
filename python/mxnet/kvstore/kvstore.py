@@ -84,11 +84,12 @@ class KVStore(KVStoreBase):
         key : str, or int
             The key.
 
-        value : NDArray
+        value : NDArray, list of NDArray
             The value corresponding to the key to broadcast
 
         out : NDArray, list of NDArray
             Values corresponding to the key to store the result
+            `out` should have same length as `value`.
 
         priority : int, optional
             The priority of the operation.
@@ -106,10 +107,12 @@ class KVStore(KVStoreBase):
         [ 2.  2.  2.]]
 
         """
+
         ckeys, cvals, use_str_keys = _ctype_key_value(key, value)
         _, couts, use_str_keys2 = _ctype_key_value(key, out)
         
         assert (use_str_keys == use_str_keys2)
+        assert len(cvals) == len(couts)
 
         if use_str_keys:
             check_call(_LIB.MXKVStoreBroadcastEx(
@@ -360,6 +363,7 @@ class KVStore(KVStoreBase):
 
         out: NDArray or list of NDArray or list of list of NDArray
             Values corresponding to the keys.
+            `out` should have length as `value`.
 
         priority : int, optional
             The priority of the operation.
@@ -403,6 +407,7 @@ class KVStore(KVStoreBase):
         if out is not None:
             _, couts, use_str_keys2 = _ctype_key_value(key, out)
             assert use_str_keys == use_str_keys2
+            assert len(cvals) == len(couts)
         else:
             couts = cvals
 
