@@ -95,7 +95,7 @@ def main():
     if args.num_servers is None:
         args.num_servers = args.num_workers
     if args.p3:
-        args.env.append('DMLC_PS_VAN_TYPE=p3')
+        args.command = ['DMLC_PS_VAN_TYPE=p3'] + args.command
 
     args = dmlc_opts(args)
 
