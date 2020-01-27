@@ -77,6 +77,14 @@ class P3StoreDist : public KVStoreDist {
   }
 
  private:
+  inline void InitKV(const int key, const NDArray& value) override {
+    CHECK_EQ(value.storage_type(), kDefaultStorage)
+        << "Default storage type for values expected in P3StoreDist";
+    comm_->Init(key, value.storage_type(), value.shape(), value.dtype());
+    /* Fix the key encoding */
+    EncodeDefaultKey(key, value.shape().Size(), mshadow::mshadow_sizeof(value.dtype()));
+  }
+
   void PushCompressed(int key, const NDArray& comm_buf, const PSKV& pskv,
                       int priority) final {
     LOG(FATAL) << "NotImplementedError: PushCompressed not implemented in P3StoreDist.";

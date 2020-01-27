@@ -194,11 +194,7 @@ class KVStoreDist : public KVStoreLocal {
                 const std::vector<NDArray>& values) override {
     CheckUnique(keys);
     for (size_t i = 0; i < keys.size(); ++i) {
-      comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
-      /* Fix the key encoding */
-      EncodeDefaultKey(keys[i], values[i].shape().Size(),
-                       mshadow::mshadow_sizeof(values[i].dtype()));
-
+      InitKV(keys[i], values[i]);
     }
     if (get_rank() == 0 && this->ps_worker_->get_customer()->customer_id() == 0) {
       Push_(keys, values, 0, false);
@@ -213,6 +209,10 @@ class KVStoreDist : public KVStoreLocal {
     if (!ps::Postoffice::Get()->is_recovery()) {
       Barrier();
     }
+  }
+
+  virtual inline void InitKV(const int key, const NDArray& value) {
+    comm_->Init(key, value.storage_type(), value.shape(), value.dtype());
   }
 
   void PushPullImpl(const std::vector<int>& keys,
