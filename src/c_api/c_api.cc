@@ -1780,13 +1780,13 @@ int MXKVStorePullEx(KVStoreHandle handle,
 }
 
 int MXKVStoreBroadcast(KVStoreHandle handle,
-                      mx_uint vnum,
-                      const int* vkeys,
-                      mx_uint onum,
-                      const int* okeys,
-                      NDArrayHandle* vals,
-                      NDArrayHandle* outs,
-                      int priority) {
+                       mx_uint vnum,
+                       const int* vkeys,
+                       mx_uint onum,
+                       const int* okeys,
+                       NDArrayHandle* vals,
+                       NDArrayHandle* outs,
+                       int priority) {
   API_BEGIN();
   std::vector<int> v_vkeys(vnum);
   std::vector<int> v_okeys(onum);
@@ -1806,13 +1806,13 @@ int MXKVStoreBroadcast(KVStoreHandle handle,
 }
 
 int MXKVStoreBroadcastEx(KVStoreHandle handle,
-                        mx_uint vnum,
-                        const char** vkeys,
-                        mx_uint onum,
-                        const char** okeys,
-                        NDArrayHandle* vals,
-                        NDArrayHandle* outs,
-                        int priority) {
+                         mx_uint vnum,
+                         const char** vkeys,
+                         mx_uint onum,
+                         const char** okeys,
+                         NDArrayHandle* vals,
+                         NDArrayHandle* outs,
+                         int priority) {
   API_BEGIN();
   std::vector<std::string> v_vkeys(vnum);
   std::vector<std::string> v_okeys(onum);
