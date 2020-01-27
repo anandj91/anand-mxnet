@@ -76,7 +76,8 @@ def _create_sparse_kvstore(kvstore):
     else:
         raise TypeError("Cannot create '%s' KVStore with row_sparse parameters. "
                         "The type must be KVStore or str." % kvstore)
-    return (kv, kv.is_capable(kvs.KVStoreBase.OPTIMIZER))
+    assert kv.is_capable(kvs.KVStoreBase.OPTIMIZER)
+    return (kv, True)
 
 def _create_kvstore(kvstore, num_device, arg_params):
     """Create kvstore
