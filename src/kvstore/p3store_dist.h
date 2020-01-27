@@ -44,16 +44,6 @@ class P3StoreDist : public KVStoreDist {
     slice_threshold_ = dmlc::GetEnv("MXNET_KVSTORE_SLICE_THRESHOLD", 40 * 1000);
   }
 
-  void Init(const std::vector<int>& keys,
-            const std::vector<NDArray>& values) final {
-    LOG(FATAL) << "NotImplementedError: Init not supported in P3StoreDist. Call Broadcast instead.";
-  }
-
-  void Init(const std::vector<std::string>& str_keys,
-            const std::vector<NDArray>& values) final {
-    LOG(FATAL) << "NotImplementedError: Init not supported in P3StoreDist. Call Broadcast instead.";
-  }
-
   void PullRowSparse(const std::vector<int>& str_keys,
                      const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
                      int priority) final {
