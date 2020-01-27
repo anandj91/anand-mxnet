@@ -215,20 +215,25 @@ class KVStoreDist : public KVStoreLocal {
     comm_->Init(key, value.storage_type(), value.shape(), value.dtype());
   }
 
-  void PushPullImpl(const std::vector<int>& keys,
+  void PushPullImpl(const std::vector<int>& vkeys,
+                    const std::vector<int>& okeys,
                     const std::vector<NDArray>& values,
                     const std::vector<NDArray*>& outputs,
                     int priority) override {
-    std::vector<int> uniq_keys;
-    std::vector<int> uniq_okeys; // Not used
+    std::vector<int> uniq_vkeys;
+    std::vector<int> uniq_okeys;
     std::vector<std::vector<NDArray>> grouped_vals;
     std::vector<std::vector<NDArray*>> grouped_outs;
 
-    GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals, false);
-    GroupKVPairsPull(keys, outputs, &uniq_okeys, &grouped_outs, true);
+    GroupKVPairsPush(vkeys, values, &uniq_vkeys, &grouped_vals, false);
+    GroupKVPairsPull(okeys, outputs, &uniq_okeys, &grouped_outs, true);
+    CHECK_EQ(uniq_vkeys.size(), uniq_okeys.size())
+             << "List of push and pull keys are different";
 
-    for (size_t i = 0; i < uniq_keys.size(); ++i) {
-      int key = uniq_keys[i];
+    for (size_t i = 0; i < uniq_vkeys.size(); ++i) {
+      CHECK_EQ(uniq_vkeys[i], uniq_okeys[i])
+             << "Mismatch in push and pull key";
+      int key = uniq_vkeys[i];
       const auto& vals = grouped_vals[i];
       const auto& outs = grouped_outs[i];
 
