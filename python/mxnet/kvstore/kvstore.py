@@ -110,7 +110,7 @@ class KVStore(KVStoreBase):
 
         ckeys, cvals, use_str_keys = _ctype_key_value(key, value)
         _, couts, use_str_keys2 = _ctype_key_value(key, out)
-        
+
         assert (use_str_keys == use_str_keys2)
         assert len(cvals) == len(couts)
 
