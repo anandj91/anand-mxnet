@@ -133,16 +133,21 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
             continue
 
         # client manipulation
+        scl = 10
         for adv in advs:
             g = grad_list[adv]
-            g *= 100
+            abslt = g.abs()
+            tmp = abslt.reshape((-1,))
+            thr = tmp[tmp.topk(k=int(g.size*0.01))][-1]
+            mask = (abslt >= thr)
+            scale = (mask * (scl - 1)) + 1
+            g *= scale
+
+        # server correction
+        for adv in [0, 1, 2, 3]:
+            g = grad_list[adv]
 
         name = param_names[index]
-        # server correction
-        for adv in advs:
-            g = grad_list[adv]
-            g.clip(-5, 5)
-
         # push gradient, priority is negative index
         kvstore.push(name, grad_list, priority=-index)
         # pull back the weights
