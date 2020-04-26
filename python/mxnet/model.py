@@ -131,11 +131,18 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
         arg_list, grad_list = pair
         if grad_list[0] is None:
             continue
+
+        # client manipulation
         for adv in advs:
             g = grad_list[adv]
-            g *= 50
+            g *= 100
 
         name = param_names[index]
+        # server correction
+        for adv in advs:
+            g = grad_list[adv]
+            g.clip(-5, 5)
+
         # push gradient, priority is negative index
         kvstore.push(name, grad_list, priority=-index)
         # pull back the weights
