@@ -123,12 +123,18 @@ def _update_params_on_kvstore_nccl(param_arrays, grad_arrays, kvstore, param_nam
         kvstore.pull(valid_param_names[start:end], valid_param_arrays[start:end], priority=-start)
         start = end
 
+advs = [0]
+
 def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
     """Perform update of param_arrays from grad_arrays on kvstore."""
     for index, pair in enumerate(zip(param_arrays, grad_arrays)):
         arg_list, grad_list = pair
         if grad_list[0] is None:
             continue
+        for adv in advs:
+            g = grad_list[adv]
+            g *= 50
+
         name = param_names[index]
         # push gradient, priority is negative index
         kvstore.push(name, grad_list, priority=-index)

@@ -55,7 +55,7 @@ if __name__ == '__main__':
         pad_size       = 4,
         # train
         batch_size     = 128,
-        num_epochs     = 300,
+        num_epochs     = 100,
         lr             = .05,
         lr_step_epochs = '200,250',
     )
